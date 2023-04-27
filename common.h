@@ -1,6 +1,3 @@
-#ifndef MIMUW_SIK_TCP_SOCKETS_COMMON_H
-#define MIMUW_SIK_TCP_SOCKETS_COMMON_H
-
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -91,6 +88,23 @@ inline static void bind_socket(int socket_fd, uint16_t port) {
                      (socklen_t) sizeof(server_address)));
 }
 
+int bind_socket(uint16_t port) {
+    int socket_fd = socket(AF_INET, SOCK_DGRAM, 0); // creating IPv4 UDP socket
+    ENSURE(socket_fd >= 0);
+    // after socket() call; we should close(sock) on any execution path;
+
+    sockaddr_in server_address;
+    server_address.sin_family = AF_INET; // IPv4
+    server_address.sin_addr.s_addr = htonl(INADDR_ANY); // listening on all interfaces
+    server_address.sin_port = htons(port);
+
+    // bind the socket to a concrete address
+    CHECK_ERRNO(bind(socket_fd, (sockaddr *) &server_address,
+                        (socklen_t) sizeof(server_address)));
+
+    return socket_fd;
+}
+
 /// Returns the assigned port number
 inline static uint16_t bind_socket_to_any_port(int socket_fd) {
     bind_socket(socket_fd, 0);
@@ -114,15 +128,6 @@ inline static int accept_connection(int socket_fd, struct sockaddr_in *client_ad
 
 inline static void connect_socket(int socket_fd, const struct sockaddr_in *address) {
     CHECK_ERRNO(connect(socket_fd, (struct sockaddr *) address, sizeof(*address)));
-}
-
-inline static void send_message(int socket_fd, const void *message, size_t length, int flags) {
-    errno = 0;
-    ssize_t sent_length = send(socket_fd, message, length, flags);
-    if (sent_length < 0) {
-        PRINT_ERRNO();
-    }
-    ENSURE(sent_length == (ssize_t) length);
 }
 
 inline static size_t receive_message(int socket_fd, void *buffer, size_t max_length, int flags) {
@@ -150,5 +155,3 @@ inline static void set_port_reuse(int socket_fd) {
     int option_value = 1;
     CHECK_ERRNO(setsockopt(socket_fd, SOL_SOCKET, SO_REUSEPORT, &option_value, sizeof(option_value)));
 }
-
-#endif //MIMUW_SIK_TCP_SOCKETS_COMMON_H

@@ -7,8 +7,8 @@ set(CMAKE_CXX_FLAGS "-Wall -O2")
 
 FIND_PACKAGE( Boost COMPONENTS program_options REQUIRED )
 
-# add_executable(sikradio-receiver sikradio-receiver.cpp common.h err.h)
+add_executable(sikradio-receiver sikradio-receiver.cpp common.h err.h)
 add_executable(sikradio-sender sikradio-sender.cpp common.h err.h)
-# target_link_libraries(sikradio-receiver pthread)
-# target_link_libraries(sikradio-receiver Boost::program_options)
+target_link_libraries(sikradio-receiver pthread)
+target_link_libraries(sikradio-receiver Boost::program_options)
 target_link_libraries(sikradio-sender Boost::program_options)

@@ -1004,4 +1004,6 @@ CMakeFiles/sikradio-sender.dir/sikradio-sender.cpp.o: \
   /opt/homebrew/include/boost/program_options/version.hpp \
   /Users/agrodowski/Desktop/MIM/IVSEM/SIK/ZAL1/err.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/c++/v1/stdbool.h \
-  /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/14.0.0/include/stdbool.h
+  /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/14.0.0/include/stdbool.h \
+  /Users/agrodowski/Desktop/MIM/IVSEM/SIK/ZAL1/common.h \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/signal.h

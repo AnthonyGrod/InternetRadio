@@ -13,9 +13,12 @@
 #include <sys/types.h>
 
 #include "err.h"
+#include "common.h"
 
 using namespace std;
 namespace po = boost::program_options;
+
+// #define htonll(x) ((((uint64_t)htonl(x)) << 32) + htonl((x) >> 32))
 
 void print_packet(char *p) {
     for (int i = 16; i < 16 + 512; i++) {
@@ -28,8 +31,8 @@ int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
     desc.add_options()
         ("help", "produce help message")
         ("DEST_ADDR,a", po::value<string>()->required(), "set receiver ip address")
-        ("DATA_PORT,P", po::value<int>()->default_value(20000+(438477%10000)), "set receiver port")
-        ("NAME,n", po::value<string>()->default_value("Nienazwany odbiornik"), "set sender's name")
+        ("DATA_PORT,P", po::value<int>()->default_value(43848), "set receiver port")
+        ("NAME,n", po::value<string>()->default_value("Nienazwany Nadajnik"), "set sender's name")
         ("PSIZE,p", po::value<int>()->default_value(512), "set package size (in bytes)")
     ;
 
@@ -45,32 +48,16 @@ int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
     return 0;  
 }
 
-uint16_t read_port(char *string) {
+void send_message(int socket_fd, const sockaddr_in *send_address, const char *message, size_t psize) {
+    size_t message_length = psize;
+    int send_flags = 0;
+    socklen_t address_length = (socklen_t) sizeof(*send_address);
     errno = 0;
-    unsigned long port = strtoul(string, NULL, 10);
-    PRINT_ERRNO();
-    if (port > UINT16_MAX) {
-        fatal("%u is not a valid port number", port);
+    ssize_t sent_length = sendto(socket_fd, message, message_length, send_flags,
+                                 (sockaddr *) send_address, address_length);
+    if (sent_length < 0) {
+        PRINT_ERRNO();
     }
-
-    return (uint16_t) port;
-}
-
-int bind_socket(uint16_t port) {
-    int socket_fd = socket(AF_INET, SOCK_DGRAM, 0); // creating IPv4 UDP socket
-    ENSURE(socket_fd >= 0);
-    // after socket() call; we should close(sock) on any execution path;
-
-    sockaddr_in server_address;
-    server_address.sin_family = AF_INET; // IPv4
-    server_address.sin_addr.s_addr = htonl(INADDR_ANY); // listening on all interfaces
-    server_address.sin_port = htons(port);
-
-    // bind the socket to a concrete address
-    CHECK_ERRNO(bind(socket_fd, (sockaddr *) &server_address,
-                        (socklen_t) sizeof(server_address)));
-
-    return socket_fd;
 }
 
 sockaddr_in get_send_address(char *host, uint16_t port) {
@@ -94,18 +81,6 @@ sockaddr_in get_send_address(char *host, uint16_t port) {
     return send_address;
 }
 
-void send_message(int socket_fd, const sockaddr_in *send_address, const char *message, size_t psize) {
-    size_t message_length = psize;
-    int send_flags = 0;
-    socklen_t address_length = (socklen_t) sizeof(*send_address);
-    errno = 0;
-    ssize_t sent_length = sendto(socket_fd, message, message_length, send_flags,
-                                 (sockaddr *) send_address, address_length);
-    if (sent_length < 0) {
-        PRINT_ERRNO();
-    }
-}
-
 int main(int ac, char* av[]) {
     // Declare the supported options.
     po::variables_map vm;
@@ -121,11 +96,11 @@ int main(int ac, char* av[]) {
     // First 8 bytes: uint64 session_id, Second 8 bytes: uint64 first_byte_num, Third 512 bytes: char[512] data
     char buffer[psize + 16];
 
-    // create socket binded at data_port
-    int socket_fd = bind_socket(data_port);
-    if (socket_fd < 0) {
-        PRINT_ERRNO();
-    }
+    // // create socket binded at data_port
+    // int socket_fd = bind_socket(data_port);
+    // if (socket_fd < 0) {
+    //     PRINT_ERRNO();
+    // }
 
     int dest_addr_len = dest_addr_str.length();
     char *dest_addr = new char[dest_addr_len + 1];
@@ -134,6 +109,11 @@ int main(int ac, char* av[]) {
     // get receiver address
     sockaddr_in send_address = get_send_address(dest_addr, (uint16_t) data_port);
 
+    int socket_fd = socket(PF_INET, SOCK_DGRAM, 0);
+    if (socket_fd < 0) {
+        PRINT_ERRNO();
+    }
+
     size_t session_id = time(NULL);
     size_t first_byte_num = 0;
     while (1) {
@@ -141,12 +121,12 @@ int main(int ac, char* av[]) {
         // parse session_id and first_byte_num
         size_t length = fread(buffer + 16, 1, psize, stdin);
         if (length % psize != 0 && feof(stdin)) {
-            printf("chuj\n");
             break;
         }
-        memcpy(buffer, &session_id, 8);
-        memcpy(buffer + 8, &first_byte_num, 8);
-        // print_packet(buffer);
+        size_t htonll_session_id = htonll(session_id);
+        size_t htonll_first_byte_num = htonll(first_byte_num);
+        memcpy(buffer, &htonll_session_id, 8);
+        memcpy(buffer + 8, &htonll_first_byte_num, 8);
         // send message to receiver
         send_message(socket_fd, &send_address, buffer, psize);
         first_byte_num += psize;

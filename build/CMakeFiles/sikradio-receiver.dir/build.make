@@ -92,6 +92,7 @@ sikradio__receiver_EXTERNAL_OBJECTS =
 
 sikradio-receiver: CMakeFiles/sikradio-receiver.dir/sikradio-receiver.cpp.o
 sikradio-receiver: CMakeFiles/sikradio-receiver.dir/build.make
+sikradio-receiver: /opt/homebrew/lib/libboost_program_options-mt.dylib
 sikradio-receiver: CMakeFiles/sikradio-receiver.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/Users/agrodowski/Desktop/MIM/IVSEM/SIK/ZAL1/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable sikradio-receiver"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/sikradio-receiver.dir/link.txt --verbose=$(VERBOSE)

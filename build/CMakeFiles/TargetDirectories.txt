@@ -1,3 +1,4 @@
+/Users/agrodowski/Desktop/MIM/IVSEM/SIK/ZAL1/build/CMakeFiles/sikradio-receiver.dir
 /Users/agrodowski/Desktop/MIM/IVSEM/SIK/ZAL1/build/CMakeFiles/sikradio-sender.dir
 /Users/agrodowski/Desktop/MIM/IVSEM/SIK/ZAL1/build/CMakeFiles/edit_cache.dir
 /Users/agrodowski/Desktop/MIM/IVSEM/SIK/ZAL1/build/CMakeFiles/rebuild_cache.dir

@@ -117,6 +117,19 @@ depend:
 .PHONY : depend
 
 #=============================================================================
+# Target rules for targets named sikradio-receiver
+
+# Build rule for target.
+sikradio-receiver: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 sikradio-receiver
+.PHONY : sikradio-receiver
+
+# fast build rule for target.
+sikradio-receiver/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sikradio-receiver.dir/build.make CMakeFiles/sikradio-receiver.dir/build
+.PHONY : sikradio-receiver/fast
+
+#=============================================================================
 # Target rules for targets named sikradio-sender
 
 # Build rule for target.
@@ -128,6 +141,30 @@ sikradio-sender: cmake_check_build_system
 sikradio-sender/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/sikradio-sender.dir/build.make CMakeFiles/sikradio-sender.dir/build
 .PHONY : sikradio-sender/fast
+
+sikradio-receiver.o: sikradio-receiver.cpp.o
+.PHONY : sikradio-receiver.o
+
+# target to build an object file
+sikradio-receiver.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sikradio-receiver.dir/build.make CMakeFiles/sikradio-receiver.dir/sikradio-receiver.cpp.o
+.PHONY : sikradio-receiver.cpp.o
+
+sikradio-receiver.i: sikradio-receiver.cpp.i
+.PHONY : sikradio-receiver.i
+
+# target to preprocess a source file
+sikradio-receiver.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sikradio-receiver.dir/build.make CMakeFiles/sikradio-receiver.dir/sikradio-receiver.cpp.i
+.PHONY : sikradio-receiver.cpp.i
+
+sikradio-receiver.s: sikradio-receiver.cpp.s
+.PHONY : sikradio-receiver.s
+
+# target to generate assembly for a file
+sikradio-receiver.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sikradio-receiver.dir/build.make CMakeFiles/sikradio-receiver.dir/sikradio-receiver.cpp.s
+.PHONY : sikradio-receiver.cpp.s
 
 sikradio-sender.o: sikradio-sender.cpp.o
 .PHONY : sikradio-sender.o
@@ -161,7 +198,11 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
+	@echo "... sikradio-receiver"
 	@echo "... sikradio-sender"
+	@echo "... sikradio-receiver.o"
+	@echo "... sikradio-receiver.i"
+	@echo "... sikradio-receiver.s"
 	@echo "... sikradio-sender.o"
 	@echo "... sikradio-sender.i"
 	@echo "... sikradio-sender.s"
