@@ -18,8 +18,6 @@ public:
     size_t _tail;                     // tail points to first chunk position taken by data
     size_t _right_wall;               // last chunk index of the data we can write (equal to floor(BSIZE / PSIZE) - 1
     bool _was_three_quarters_full_flag; // flag that is set to true if buffer was three quarters full
-    std::thread* _rec_thread_ptr;     // pointer to the thread that will receive data from nadajnik
-    std::thread* _send_thread_ptr;    // pointer to the thread that will send data to stdout
     std::mutex _mutex;                // mutex for monitor
     std::condition_variable _cond;    // condition variable for monitor
     std::vector<uint8_t> _data;          // pointer to the data. All members will have guarenteed atomicity
@@ -41,8 +39,6 @@ public:
 
     void all_overriden(uint8_t *big_buff, size_t psize);
 
-    // Write nbytes from buffer to fd starting from start * psize index.
-    void write_from_buffer(const int fd, const size_t start, const size_t nbytes, const size_t psize);
 
     // Copy nbytes from src to buffer starting from start * psize index.
     void memcpy(const uint8_t* src, const size_t start, const size_t psize);
@@ -69,8 +65,6 @@ CycleBuff::CycleBuff(const size_t PSIZE, const size_t BSIZE)
   	, _tail(0)
 	, _right_wall(_capacity - 1)
 	, _was_three_quarters_full_flag(false)
-	, _rec_thread_ptr(NULL)
-	, _send_thread_ptr(NULL)
   	, _mutex()
 	, _cond()
 	, _data(_capacity * PSIZE)
@@ -84,8 +78,6 @@ CycleBuff::CycleBuff()
     , _tail(0)
 	, _right_wall(0)
 	, _was_three_quarters_full_flag(false)
-	, _rec_thread_ptr(NULL)
-	, _send_thread_ptr(NULL)
     , _mutex()
 	, _cond()
 	, _data(0)
@@ -137,15 +129,6 @@ void CycleBuff::clear(const size_t start, const size_t nbytes, const size_t psiz
 		::memset(_data.data() + start * psize, 0, (_capacity - start) * psize);
 		::memset(_data.data(), 0, nbytes - (_capacity - start) * psize);
 	}
-}
-
-// Write nbytes from buffer to fd starting from start index. Start index, nbytes must be divisible by PSIZE
-// CAUTION: nbytes <= _capacity
-void CycleBuff::write_from_buffer(const int fd, const size_t start, const size_t nbytes, const size_t psize) {
-    assert(nbytes % psize == 0);
-	assert(nbytes <= _capacity * psize);
-
-	::write(fd, _data.data() + start * psize, nbytes);
 }
 
 // Copy psize bytes from src to buffer starting from start chunk index.

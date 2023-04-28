@@ -70,7 +70,6 @@ size_t calculate_packet_number(size_t byte_zero, size_t first_byte_num, size_t p
 }
 
 void put_into_buff(size_t put_num, size_t newest_num, size_t psize) {
-	//assert(put_num != newest_num);
 	if (put_num > newest_num) {
 		size_t packets_to_put = put_num - newest_num;
 		size_t it = (cycle_buff_ptr->_head + 1) % cycle_buff_ptr->_capacity;
@@ -179,8 +178,6 @@ int main(int ac, char* av[]) {
 	struct sockaddr_in client_address;
 	std::thread _send_thread = std::thread(print_buffer);
 	while (first_session_read) {
-		// Receiving the packet into big_buffer
-		// psize_read = recv(data_port, big_buff, MAX_PACKET_SIZE, 0);
 		psize_read = read_message(socket_fd, &client_address, big_buff, MAX_PACKET_SIZE);
 		if (psize_read < 16 || psize_read == SIZE_MAX) {
 			continue;
@@ -220,9 +217,10 @@ int main(int ac, char* av[]) {
 		std::unique_lock lk(cycle_buff_ptr->_mutex);
 
 		packet_number = calculate_packet_number(byte_zero, first_byte_num, psize_read);
+		
 		put_into_buff(packet_number, last_packet_num_received, psize_read);
+		
 		last_packet_num_received = packet_number;
-		// std::cerr << last_packet_num_received << std::endl; /// + 1 * (packet_number % 2 == 0)
 
 		if (cycle_buff_ptr->is_three_quarters_full()) {
 			cycle_buff_ptr->_was_three_quarters_full_flag = true;

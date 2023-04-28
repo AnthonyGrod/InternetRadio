@@ -104,7 +104,7 @@ int main(int ac, char* av[]) {
 
     int dest_addr_len = dest_addr_str.length();
     char *dest_addr = new char[dest_addr_len + 1];
-    strcpy(dest_addr, dest_addr_str.c_str());
+    strcpy((char*) dest_addr, dest_addr_str.c_str());
 
     // get receiver address
     sockaddr_in send_address = get_send_address(dest_addr, (uint16_t) data_port);
