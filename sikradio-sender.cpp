@@ -18,9 +18,9 @@
 using namespace std;
 namespace po = boost::program_options;
 
-// #define htonll(x) ((((uint64_t)htonl(x)) << 32) + htonl((x) >> 32))
+#define htonll(x) ((((uint64_t)htonl(x)) << 32) + htonl((x) >> 32))
 
-void print_packet(char *p) {
+void print_packet(uint8_t *p) {
     for (int i = 16; i < 16 + 512; i++) {
         printf("%c", p[i]);
     }
@@ -31,7 +31,7 @@ int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
     desc.add_options()
         ("help", "produce help message")
         ("DEST_ADDR,a", po::value<string>()->required(), "set receiver ip address")
-        ("DATA_PORT,P", po::value<int>()->default_value(43848), "set receiver port")
+        ("DATA_PORT,P", po::value<int>()->default_value(20000 + (438477 % 10000)), "set receiver port")
         ("NAME,n", po::value<string>()->default_value("Nienazwany Nadajnik"), "set sender's name")
         ("PSIZE,p", po::value<int>()->default_value(512), "set package size (in bytes)")
     ;
@@ -48,7 +48,7 @@ int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
     return 0;  
 }
 
-void send_message(int socket_fd, const sockaddr_in *send_address, const char *message, size_t psize) {
+void send_message(int socket_fd, const sockaddr_in *send_address, const uint8_t *message, size_t psize) {
     size_t message_length = psize;
     int send_flags = 0;
     socklen_t address_length = (socklen_t) sizeof(*send_address);
@@ -93,8 +93,8 @@ int main(int ac, char* av[]) {
     int psize = vm["PSIZE"].as<int>();
 
     // allocate memmnory for message.
-    // First 8 bytes: uint64 session_id, Second 8 bytes: uint64 first_byte_num, Third 512 bytes: char[512] data
-    char buffer[psize + 16];
+    // First 8 bytes: uint64 session_id, Second 8 bytes: uint64 first_byte_num, Third 512 bytes: uint8_t[512] data
+    uint8_t buffer[psize + 16];
 
     // // create socket binded at data_port
     // int socket_fd = bind_socket(data_port);
@@ -117,7 +117,7 @@ int main(int ac, char* av[]) {
     size_t session_id = time(NULL);
     size_t first_byte_num = 0;
     while (1) {
-        // read message from stdin and store it in char[512] data
+        // read message from stdin and store it in uint8_t[512] data
         // parse session_id and first_byte_num
         size_t length = fread(buffer + 16, 1, psize, stdin);
         if (length % psize != 0 && feof(stdin)) {

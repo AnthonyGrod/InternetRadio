@@ -3,7 +3,9 @@
 
 #include <iostream>
 #include <cstddef>
-#include <pthread.h>
+#include <thread>
+#include <condition_variable>
+#include <mutex>
 #include <vector>
 #include <cmath>
 
@@ -20,7 +22,7 @@ public:
     std::thread* _send_thread_ptr;    // pointer to the thread that will send data to stdout
     std::mutex _mutex;                // mutex for monitor
     std::condition_variable _cond;    // condition variable for monitor
-    std::vector<char> _data;          // pointer to the data. All members will have guarenteed atomicity
+    std::vector<uint8_t> _data;          // pointer to the data. All members will have guarenteed atomicity
 	std::vector<bool> _is_missing;
 
     // initialize buffer
@@ -37,13 +39,13 @@ public:
     // Fill buffer with zeros from start * psize to start * psize + nbytes.
     void clear(const size_t start, const size_t nbytes, const size_t psize);
 
-    void all_overriden(char *big_buff, size_t psize);
+    void all_overriden(uint8_t *big_buff, size_t psize);
 
     // Write nbytes from buffer to fd starting from start * psize index.
     void write_from_buffer(const int fd, const size_t start, const size_t nbytes, const size_t psize);
 
     // Copy nbytes from src to buffer starting from start * psize index.
-    void memcpy(const char* src, const size_t start, const size_t psize);
+    void memcpy(const uint8_t* src, const size_t start, const size_t psize);
 
     // Checks if buffer is full with more than 3/4 of data
     bool is_three_quarters_full();
@@ -113,7 +115,7 @@ void CycleBuff::clear() {
 }
 
 // Fill buffer with zeroes besides last index in which copy big_buff psize bytes.
-void CycleBuff::all_overriden(char *big_buff, size_t psize) {
+void CycleBuff::all_overriden(uint8_t *big_buff, size_t psize) {
 	_tail = 0;
 	_head = _capacity - 1;
 	_taken_capacity = _capacity;
@@ -148,7 +150,7 @@ void CycleBuff::write_from_buffer(const int fd, const size_t start, const size_t
 
 // Copy psize bytes from src to buffer starting from start chunk index.
 // CAUTION: nbytes <= _capacity
-void CycleBuff::memcpy(const char* src, const size_t start, const size_t psize) {;
+void CycleBuff::memcpy(const uint8_t* src, const size_t start, const size_t psize) {;
 	::memcpy(_data.data() + start * psize, src, psize);
 }
 
@@ -185,9 +187,9 @@ void CycleBuff::print_missing(size_t head_packet_num) {
 	size_t it = _tail;
 	size_t tail_packet_num = head_packet_num - _taken_capacity + 1;
 	size_t curr_packet_num = tail_packet_num;
-	for (int i = 0; i < _taken_capacity; i++) {
+	for (size_t i = 0; i < _taken_capacity; i++) {
 		if (_is_missing[it] == true) {
-			std::cerr << "MISSING: BEFORE" << head_packet_num << " EXPECTED " << curr_packet_num << std::endl;
+			std::cerr << "MISSING: BEFORE " << head_packet_num << " EXPECTED " << curr_packet_num << std::endl;
 		}
 		curr_packet_num++;
 		it = (it + 1) % _capacity;

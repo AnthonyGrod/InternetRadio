@@ -13,6 +13,7 @@
 
 #include <thread>
 #include <mutex>
+#include <condition_variable>
 
 #include "err.h"
 #include "common.h"
@@ -25,7 +26,7 @@ namespace po = boost::program_options;
 
 #define ntohll(x) ((((uint64_t)ntohl(x)) << 32) + ntohl((x) >> 32))
 
-char big_buff[MAX_PACKET_SIZE];
+uint8_t big_buff[MAX_PACKET_SIZE];
 std::atomic<bool> is_running(true);
 size_t psize_read = 0;
 size_t last_packet_num_received = 0;
@@ -33,18 +34,12 @@ size_t packet_number = 0;
 
 CycleBuff *cycle_buff_ptr = new CycleBuff();
 
-void print_packet(char *p, size_t psize) {
-    for (int i = 0; i < psize; i++) {
-        printf("%c", p[i]);
-    }
-}
-
 int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
     po::options_description desc("Allowed options");
     desc.add_options()
         ("help", "produce help message")	// TODO: dest_addr should be optional but for debug purposes it's required.
         ("DEST_ADDR,a", po::value<string>()->default_value("localhost"), "set sender's ip address") // if it's -1 then it means that we want to receive packets from anyone
-        ("DATA_PORT,P", po::value<int>()->default_value(43848), "set sender's port")
+        ("DATA_PORT,P", po::value<int>()->default_value(20000 + (438477 % 10000)), "set sender's port")
         ("BSIZE,b", po::value<int>()->default_value(65536), "set buffor size (in bytes)")
     ;
 
@@ -80,7 +75,7 @@ void put_into_buff(size_t put_num, size_t newest_num, size_t psize) {
 		size_t packets_to_put = put_num - newest_num;
 		size_t it = (cycle_buff_ptr->_head + 1) % cycle_buff_ptr->_capacity;
 
-		for (int i = 0; i < packets_to_put; i++) {
+		for (size_t i = 0; i < packets_to_put; i++) {
 			if (cycle_buff_ptr->is_index_inside_data(it)) {
 				if (it == cycle_buff_ptr->_head) {
 					cycle_buff_ptr->all_overriden(big_buff, psize);
@@ -100,7 +95,6 @@ void put_into_buff(size_t put_num, size_t newest_num, size_t psize) {
 			} else {
 				if (i == packets_to_put - 1) {
 					cycle_buff_ptr->memcpy(big_buff + 16, it, psize);
-					// cycle_buff_ptr->_tail = (it + 1) % cycle_buff_ptr->_capacity;
 					cycle_buff_ptr->_head = it;
 					cycle_buff_ptr->_taken_capacity++;
 					cycle_buff_ptr->_is_missing[it] = false;
@@ -113,15 +107,13 @@ void put_into_buff(size_t put_num, size_t newest_num, size_t psize) {
 
 			it = (it + 1) % cycle_buff_ptr->_capacity;
 		}
-
-		// cycle_buff_ptr->_head = it;
 	} else {
 		size_t packet_diff = newest_num - put_num;
 		if (cycle_buff_ptr->_taken_capacity < packet_diff) {
 			return; // packet too old
 		}
 		size_t it = cycle_buff_ptr->_head;
-		for (int i = 0; i < packet_diff; i++) {
+		for (size_t i = 0; i < packet_diff; i++) {
 			if (it == 0) {
 				it = cycle_buff_ptr->_capacity - 1;
 			} else {
@@ -144,7 +136,7 @@ void print_buffer() {
 		});
 
 		// Copying data from operational buffer to local buffer
-		std::vector<char> local_buffer(psize_read);
+		std::vector<uint8_t> local_buffer(psize_read);
 		::memcpy(local_buffer.data(), cycle_buff_ptr->_data.data() + (cycle_buff_ptr->_tail) * psize_read, psize_read);
 		cycle_buff_ptr->_taken_capacity--;
 		cycle_buff_ptr->_tail = (cycle_buff_ptr->_tail + 1) % cycle_buff_ptr->_capacity;
@@ -152,14 +144,13 @@ void print_buffer() {
 		lk.unlock();
 
 		// Printing data from local buffer to stdout
-		::write(STDOUT_FILENO, local_buffer.data(), psize_read);
+		::fwrite(local_buffer.data(), 1, psize_read, stdout);
 		cycle_buff_ptr->print_missing(last_packet_num_received);
 		helper++;
-		//print_packet(local_buffer.data(), psize_read);
 	}
 }
 
-size_t read_message(int socket_fd, struct sockaddr_in *client_address, char *buffer, size_t max_length) {
+size_t read_message(int socket_fd, struct sockaddr_in *client_address, uint8_t *buffer, size_t max_length) {
     socklen_t address_length = (socklen_t) sizeof(*client_address);
     int flags = 0; // we do not request anything special
     errno = 0;
@@ -179,7 +170,7 @@ int main(int ac, char* av[]) {
     }
     string dest_addr_str = vm["DEST_ADDR"].as<string>();
     int data_port = vm["DATA_PORT"].as<int>();
-    int bsize = vm["BSIZE"].as<int>();
+    size_t bsize = vm["BSIZE"].as<int>();
 	int socket_fd = bind_socket(data_port);
 
 	size_t session_id = 0, byte_zero = 0, first_byte_num = 0, prev_psize_read = MAX_PACKET_SIZE + 420;

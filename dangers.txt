@@ -1,1 +1,0 @@
-1. Psize może zmieniać się podaczas programu a wątek jest tworzony ze wskaźnikiem na psize.
