@@ -28,6 +28,8 @@ namespace po = boost::program_options;
 char big_buff[MAX_PACKET_SIZE];
 std::atomic<bool> is_running(true);
 size_t psize_read = 0;
+size_t last_packet_num_received = 0;
+size_t packet_number = 0;
 
 CycleBuff *cycle_buff_ptr = new CycleBuff();
 
@@ -82,38 +84,38 @@ void put_into_buff(size_t put_num, size_t newest_num, size_t psize) {
 			if (cycle_buff_ptr->is_index_inside_data(it)) {
 				if (it == cycle_buff_ptr->_head) {
 					cycle_buff_ptr->all_overriden(big_buff, psize);
-					std::cerr << "bad" << std::endl;
 					return;
 				} else {
 					if (i == packets_to_put - 1) {
 						cycle_buff_ptr->memcpy(big_buff + 16, it, psize);
-						std::cerr << "ONEWritten to " << it << std::endl;
 						cycle_buff_ptr->_tail = (it + 1) % cycle_buff_ptr->_capacity;
 						cycle_buff_ptr->_head = it;
+						cycle_buff_ptr->_is_missing[it] = false;
 						return;
 					} else {
 						cycle_buff_ptr->clear(it, psize, psize);
+						cycle_buff_ptr->_is_missing[it] = true;
 					}
 				}
 			} else {
 				if (i == packets_to_put - 1) {
 					cycle_buff_ptr->memcpy(big_buff + 16, it, psize);
-					std::cerr << "TWOWritten to " << it << std::endl;
 					// cycle_buff_ptr->_tail = (it + 1) % cycle_buff_ptr->_capacity;
 					cycle_buff_ptr->_head = it;
 					cycle_buff_ptr->_taken_capacity++;
+					cycle_buff_ptr->_is_missing[it] = false;
 					return;
 				} 
 				cycle_buff_ptr->clear(it, psize, psize);
+				cycle_buff_ptr->_is_missing[it] = true;
 				cycle_buff_ptr->_taken_capacity++;
 			}
-			
+
 			it = (it + 1) % cycle_buff_ptr->_capacity;
 		}
 
 		// cycle_buff_ptr->_head = it;
 	} else {
-		std::cerr << "ENTEREDENTEREDENTEREDENTERED" << std::endl;
 		size_t packet_diff = newest_num - put_num;
 		if (cycle_buff_ptr->_taken_capacity < packet_diff) {
 			return; // packet too old
@@ -126,6 +128,7 @@ void put_into_buff(size_t put_num, size_t newest_num, size_t psize) {
 				it--;
 			}
 		}
+		cycle_buff_ptr->_is_missing[it] = false;
 		cycle_buff_ptr->memcpy( big_buff + 16, it, psize );
 	}
 }
@@ -134,25 +137,12 @@ void put_into_buff(size_t put_num, size_t newest_num, size_t psize) {
 void print_buffer() {
 	size_t helper = 0;
 	while (is_running) {
-		std::cerr << "PRINT1" << std::endl;
 		std::unique_lock lk(cycle_buff_ptr->_mutex);
-		std::cerr << "PRINT2" << std::endl;
 
 		cycle_buff_ptr->_cond.wait(lk, []{
-			if (!cycle_buff_ptr->_was_three_quarters_full_flag) {
-				std::cerr << "Three" << std::endl;
-			} else if (cycle_buff_ptr->is_empty()) {
-
-				std::cerr << "Empty" << std::endl;
-				std::cerr << "_head: " << cycle_buff_ptr->_head << std::endl;
-				std::cerr << "_tail: " << cycle_buff_ptr->_tail << std::endl;
-				std::cerr << "_capacity: " << cycle_buff_ptr->_capacity << std::endl;
-				std::cerr << "_taken_capacity: " << cycle_buff_ptr->_taken_capacity << std::endl;
-			}
 			return (cycle_buff_ptr->_was_three_quarters_full_flag && !cycle_buff_ptr->is_empty()); 
 		});
 
-		std::cerr << "PRINT3" << std::endl;
 		// Copying data from operational buffer to local buffer
 		std::vector<char> local_buffer(psize_read);
 		::memcpy(local_buffer.data(), cycle_buff_ptr->_data.data() + (cycle_buff_ptr->_tail) * psize_read, psize_read);
@@ -162,11 +152,10 @@ void print_buffer() {
 		lk.unlock();
 
 		// Printing data from local buffer to stdout
-		//::write(STDOUT_FILENO, local_buffer.data(), psize_deref);
-		std::cerr << "PRINT4" << std::endl;
+		::write(STDOUT_FILENO, local_buffer.data(), psize_read);
+		cycle_buff_ptr->print_missing(last_packet_num_received);
 		helper++;
-		print_packet(local_buffer.data(), psize_read);
-		std::cerr << "helper: " << helper << std::endl;
+		//print_packet(local_buffer.data(), psize_read);
 	}
 }
 
@@ -191,14 +180,9 @@ int main(int ac, char* av[]) {
     string dest_addr_str = vm["DEST_ADDR"].as<string>();
     int data_port = vm["DATA_PORT"].as<int>();
     int bsize = vm["BSIZE"].as<int>();
-	// create socket binded at data_port
-	// std::cerr << "check1" << std::endl;
-    // if (socket_fd < 0) {
-    //     PRINT_ERRNO();
-    // }
 	int socket_fd = bind_socket(data_port);
 
-	size_t session_id = 0, byte_zero = 0, first_byte_num = 0, prev_psize_read = MAX_PACKET_SIZE + 420, last_packet_num_received = 0;
+	size_t session_id = 0, byte_zero = 0, first_byte_num = 0, prev_psize_read = MAX_PACKET_SIZE + 420;
 	bool first_session_read = true;
 
 	struct sockaddr_in client_address;
@@ -208,20 +192,15 @@ int main(int ac, char* av[]) {
 		// psize_read = recv(data_port, big_buff, MAX_PACKET_SIZE, 0);
 		psize_read = read_message(socket_fd, &client_address, big_buff, MAX_PACKET_SIZE);
 		if (psize_read < 16 || psize_read == SIZE_MAX) {
-			//std::cerr << "Packet not yet received" << std::endl;
 			continue;
-		} else {
-			//std::cerr << "psize_read: " << psize_read << std::endl;
 		}
 		psize_read -= 16;
 		if (!(psize_read > 0 && psize_read <= bsize)) {
-			std::cerr << "bad1: " << std::endl;
 			continue;
 		}
 		size_t new_byte_zero = get_first_byte_num();
 		size_t new_session_id = get_session_id();
 		if (!(new_byte_zero % (psize_read + 16) == 0)) {
-			std::cerr << "bad2: " << std::endl;
 			continue;
 		}
 
@@ -249,15 +228,12 @@ int main(int ac, char* av[]) {
 
 		std::unique_lock lk(cycle_buff_ptr->_mutex);
 
-		size_t packet_number = calculate_packet_number(byte_zero, first_byte_num, psize_read);
-		//std::cerr << "Packet " << packet_number << " received" << std::endl;
+		packet_number = calculate_packet_number(byte_zero, first_byte_num, psize_read);
 		put_into_buff(packet_number, last_packet_num_received, psize_read);
 		last_packet_num_received = packet_number;
-
-		std::cerr << "TAKEN CAPACITY IS " << cycle_buff_ptr->_taken_capacity << std::endl;
+		// std::cerr << last_packet_num_received << std::endl; /// + 1 * (packet_number % 2 == 0)
 
 		if (cycle_buff_ptr->is_three_quarters_full()) {
-			std::cerr << "LLLLLLLLLLLLLLLLLLLLLLLLL" << std::endl;
 			cycle_buff_ptr->_was_three_quarters_full_flag = true;
 			cycle_buff_ptr->_cond.notify_one();
 		}

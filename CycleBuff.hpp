@@ -21,6 +21,7 @@ public:
     std::mutex _mutex;                // mutex for monitor
     std::condition_variable _cond;    // condition variable for monitor
     std::vector<char> _data;          // pointer to the data. All members will have guarenteed atomicity
+	std::vector<bool> _is_missing;
 
     // initialize buffer
     CycleBuff(const size_t PSIZE, const size_t BSIZE);
@@ -51,24 +52,27 @@ public:
 
     bool is_index_inside_data(size_t index);
 
+	void print_missing(size_t head_packet_num);
+
 };
 
 #endif
 
 
 CycleBuff::CycleBuff(const size_t PSIZE, const size_t BSIZE)
-    : _size(BSIZE)
-    , _capacity(floor(BSIZE / PSIZE))
+  	: _size(BSIZE)
+	, _capacity(floor(BSIZE / PSIZE))
 	, _taken_capacity(0)
-    , _head(0)
-    , _tail(0)
+  	, _head(0)
+  	, _tail(0)
 	, _right_wall(_capacity - 1)
 	, _was_three_quarters_full_flag(false)
 	, _rec_thread_ptr(NULL)
 	, _send_thread_ptr(NULL)
-    , _mutex()
+  	, _mutex()
 	, _cond()
-	, _data(_capacity * PSIZE) {}
+	, _data(_capacity * PSIZE)
+	, _is_missing(_capacity * PSIZE) {}
 
 CycleBuff::CycleBuff()
     : _size(0)
@@ -82,26 +86,30 @@ CycleBuff::CycleBuff()
 	, _send_thread_ptr(NULL)
     , _mutex()
 	, _cond()
-	, _data(0) {}
+	, _data(0)
+	, _is_missing(0) {}
 
 // Change size of the buffer
 void CycleBuff::change_size(const size_t PSIZE, const size_t BSIZE) {
 	_head = 0;
-    _tail = 0;
+  	_tail = 0;
 	_size = BSIZE;
 	_capacity = floor(BSIZE / PSIZE);
 	_right_wall = _capacity - 1;
 	_data.resize(_capacity * PSIZE);
+	_is_missing.resize(_capacity * PSIZE);
 	_taken_capacity = 0;
 	fill(_data.begin(), _data.end(), 0);
+	fill(_is_missing.begin(), _is_missing.end(), 0);
 }
 
 // Fill whole buffer with zeros
 void CycleBuff::clear() {
     _head = 0;
     _tail = 0;
-		_taken_capacity = 0;
+	_taken_capacity = 0;
     fill(_data.begin(), _data.end(), 0);
+	fill(_is_missing.begin(), _is_missing.end(), 0);
 }
 
 // Fill buffer with zeroes besides last index in which copy big_buff psize bytes.
@@ -110,6 +118,8 @@ void CycleBuff::all_overriden(char *big_buff, size_t psize) {
 	_head = _capacity - 1;
 	_taken_capacity = _capacity;
 	fill(_data.begin(), _data.end(), 0);
+	fill(_is_missing.begin(), _is_missing.end(), true);					// Every packet is missing besides the one on the last index
+	_is_missing[_capacity - 1] = false;
 	CycleBuff::memcpy(big_buff + 16, _capacity - 1, psize);
 }
 
@@ -169,4 +179,17 @@ bool CycleBuff::is_index_inside_data(size_t index) {
 		}
 	}
 	return false;
+}
+
+void CycleBuff::print_missing(size_t head_packet_num) {
+	size_t it = _tail;
+	size_t tail_packet_num = head_packet_num - _taken_capacity + 1;
+	size_t curr_packet_num = tail_packet_num;
+	for (int i = 0; i < _taken_capacity; i++) {
+		if (_is_missing[it] == true) {
+			std::cerr << "MISSING: BEFORE" << head_packet_num << " EXPECTED " << curr_packet_num << std::endl;
+		}
+		curr_packet_num++;
+		it = (it + 1) % _capacity;
+	}
 }
