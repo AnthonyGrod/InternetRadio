@@ -29,6 +29,7 @@ public:
     // default constructor
     CycleBuff();
 
+	// Clear buffer and change size
     void change_size(const size_t PSIZE, const size_t BSIZE);
 
     // Fill whole buffer with zeros
@@ -37,8 +38,8 @@ public:
     // Fill buffer with zeros from start * psize to start * psize + nbytes.
     void clear(const size_t start, const size_t nbytes, const size_t psize);
 
+	// Fill buffer with zeros and mark them as lost besides last index which we put psize bytes from big_buff
     void all_overriden(uint8_t *big_buff, size_t psize);
-
 
     // Copy nbytes from src to buffer starting from start * psize index.
     void memcpy(const uint8_t* src, const size_t start, const size_t psize);
@@ -46,10 +47,13 @@ public:
     // Checks if buffer is full with more than 3/4 of data
     bool is_three_quarters_full();
 
+	// Checks if buffer is empty
     bool is_empty();
 
+	// Checks if index is between _tail and _head included in both ends
     bool is_index_inside_data(size_t index);
 
+	// Print which packet numebrs are missing
 	void print_missing(size_t head_packet_num);
 
 };
@@ -83,7 +87,6 @@ CycleBuff::CycleBuff()
 	, _data(0)
 	, _is_missing(0) {}
 
-// Change size of the buffer
 void CycleBuff::change_size(const size_t PSIZE, const size_t BSIZE) {
 	_head = 0;
   	_tail = 0;
@@ -97,7 +100,6 @@ void CycleBuff::change_size(const size_t PSIZE, const size_t BSIZE) {
 	fill(_is_missing.begin(), _is_missing.end(), 0);
 }
 
-// Fill whole buffer with zeros
 void CycleBuff::clear() {
     _head = 0;
     _tail = 0;
@@ -106,7 +108,6 @@ void CycleBuff::clear() {
 	fill(_is_missing.begin(), _is_missing.end(), 0);
 }
 
-// Fill buffer with zeroes besides last index in which copy big_buff psize bytes.
 void CycleBuff::all_overriden(uint8_t *big_buff, size_t psize) {
 	_tail = 0;
 	_head = _capacity - 1;
@@ -117,8 +118,6 @@ void CycleBuff::all_overriden(uint8_t *big_buff, size_t psize) {
 	CycleBuff::memcpy(big_buff + 16, _capacity - 1, psize);
 }
 
-// Fill buffer with zeros from start * psize to start * psize + nbytes. 
-// CAUTION: nbytes <= _capacity * psize
 void CycleBuff::clear(const size_t start, const size_t nbytes, const size_t psize) {
     assert(nbytes % psize == 0);
 	assert(nbytes <= _capacity * psize);
@@ -131,8 +130,6 @@ void CycleBuff::clear(const size_t start, const size_t nbytes, const size_t psiz
 	}
 }
 
-// Copy psize bytes from src to buffer starting from start chunk index.
-// CAUTION: nbytes <= _capacity
 void CycleBuff::memcpy(const uint8_t* src, const size_t start, const size_t psize) {;
 	::memcpy(_data.data() + start * psize, src, psize);
 }

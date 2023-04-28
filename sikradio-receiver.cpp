@@ -22,7 +22,7 @@
 using namespace std;
 namespace po = boost::program_options;
 
-#define MAX_PACKET_SIZE 65535 // nie wiem czy nie powinno być 65536
+#define MAX_PACKET_SIZE 65535
 
 #define ntohll(x) ((((uint64_t)ntohl(x)) << 32) + ntohl((x) >> 32))
 
@@ -37,8 +37,8 @@ CycleBuff *cycle_buff_ptr = new CycleBuff();
 int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
     po::options_description desc("Allowed options");
     desc.add_options()
-        ("help", "produce help message")	// TODO: dest_addr should be optional but for debug purposes it's required.
-        ("DEST_ADDR,a", po::value<string>()->default_value("localhost"), "set sender's ip address") // if it's -1 then it means that we want to receive packets from anyone
+        ("help", "produce help message")
+        ("DEST_ADDR,a", po::value<string>()->required(), "set sender's ip address")
         ("DATA_PORT,P", po::value<int>()->default_value(20000 + (438477 % 10000)), "set sender's port")
         ("BSIZE,b", po::value<int>()->default_value(65536), "set buffor size (in bytes)")
     ;
@@ -62,7 +62,6 @@ size_t get_session_id() {
 	return ntohll(((uint64_t *) big_buff)[0]);
 }
 
-// Calculating which packet the sender has sent us
 size_t calculate_packet_number(size_t byte_zero, size_t first_byte_num, size_t psize) {
 	// We know that both byte_zero and first_byte_num are divisible by psize. Packets are numbered from 0.
 	assert(first_byte_num >= byte_zero);
@@ -124,7 +123,6 @@ void put_into_buff(size_t put_num, size_t newest_num, size_t psize) {
 	}
 }
 
-// Function passed to a thread which is responsible for printing the buffer. 
 void print_buffer() {
 	size_t helper = 0;
 	while (is_running) {
@@ -164,37 +162,35 @@ size_t read_message(int socket_fd, struct sockaddr_in *client_address, uint8_t *
 
 int main(int ac, char* av[]) {
 	po::variables_map vm;
-    if (set_parsed_arguments(vm, ac, av) == 1) {
+    if (set_parsed_arguments(vm, ac, av) == 1)
         return 1;
-    }
     string dest_addr_str = vm["DEST_ADDR"].as<string>();
     int data_port = vm["DATA_PORT"].as<int>();
     size_t bsize = vm["BSIZE"].as<int>();
 	int socket_fd = bind_socket(data_port);
-
 	size_t session_id = 0, byte_zero = 0, first_byte_num = 0, prev_psize_read = MAX_PACKET_SIZE + 420;
 	bool first_session_read = true;
-
 	struct sockaddr_in client_address;
+	char* address = new char[dest_addr_str.size() + 1];
+	strcpy(address, dest_addr_str.c_str());
+	struct sockaddr_in connected_client_address = get_address(address, data_port);
 	std::thread _send_thread = std::thread(print_buffer);
 	while (first_session_read) {
 		psize_read = read_message(socket_fd, &client_address, big_buff, MAX_PACKET_SIZE);
-		if (psize_read < 16 || psize_read == SIZE_MAX) {
+
+		if (!(client_address.sin_addr.s_addr == connected_client_address.sin_addr.s_addr)) // not allowing new address
 			continue;
-		}
+		if (psize_read < 16 || psize_read == SIZE_MAX)
+			continue;
 		psize_read -= 16;
-		if (!(psize_read > 0 && psize_read <= bsize)) {
+		if (!(psize_read > 0 && psize_read <= bsize))
 			continue;
-		}
 		size_t new_byte_zero = get_first_byte_num();
 		size_t new_session_id = get_session_id();
-		if (!(new_byte_zero % (psize_read + 16) == 0)) {
+		if (!(new_byte_zero % (psize_read + 16) == 0))
 			continue;
-		}
-
 		if (new_session_id > session_id) {
 			std::unique_lock lk(cycle_buff_ptr->_mutex);
-
 			session_id = new_session_id;
 			byte_zero = new_byte_zero;
 			first_byte_num = new_byte_zero;
@@ -202,7 +198,6 @@ int main(int ac, char* av[]) {
 			cycle_buff_ptr->change_size(psize_read, bsize);
 			cycle_buff_ptr->clear();
 			cycle_buff_ptr->_was_three_quarters_full_flag = false;
-
 			lk.unlock();
 		} else if (new_session_id < session_id) {
 			continue;
@@ -213,22 +208,15 @@ int main(int ac, char* av[]) {
 			}
 			first_byte_num = new_byte_zero;
 		}
-
 		std::unique_lock lk(cycle_buff_ptr->_mutex);
-
 		packet_number = calculate_packet_number(byte_zero, first_byte_num, psize_read);
-		
 		put_into_buff(packet_number, last_packet_num_received, psize_read);
-		
 		last_packet_num_received = packet_number;
-
 		if (cycle_buff_ptr->is_three_quarters_full()) {
 			cycle_buff_ptr->_was_three_quarters_full_flag = true;
 			cycle_buff_ptr->_cond.notify_one();
 		}
-
 		lk.unlock();
 	}
-
 	_send_thread.join();
 }

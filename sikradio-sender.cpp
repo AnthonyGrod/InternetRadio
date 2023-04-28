@@ -36,7 +36,6 @@ int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
         ("PSIZE,p", po::value<int>()->default_value(512), "set package size (in bytes)")
     ;
 
-
     po::store(po::parse_command_line(ac, av, desc), vm);
 
     if (vm.count("help")) {
@@ -95,12 +94,6 @@ int main(int ac, char* av[]) {
     // allocate memmnory for message.
     // First 8 bytes: uint64 session_id, Second 8 bytes: uint64 first_byte_num, Third 512 bytes: uint8_t[512] data
     uint8_t buffer[psize + 16];
-
-    // // create socket binded at data_port
-    // int socket_fd = bind_socket(data_port);
-    // if (socket_fd < 0) {
-    //     PRINT_ERRNO();
-    // }
 
     int dest_addr_len = dest_addr_str.length();
     char *dest_addr = new char[dest_addr_len + 1];
