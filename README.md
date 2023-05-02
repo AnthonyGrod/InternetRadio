@@ -3,6 +3,8 @@ This program simulates an internet radio using UDP connection.
 
 ## How does it work?
 Audio data streamed via stdin into sikradio-sender is sent via UDP to sikradio-receiver, which outputs the audio data on stdout.
+sikradio-receiver uses a cyclical buffer to which one thread is writing into from stdin and the second thread is writing from to stdout.
+Additionally, the program writes onto cerr numbers of missing UDP packets
 
 ## How to run it?
 An example usage with Makefile:
