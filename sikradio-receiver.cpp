@@ -24,7 +24,7 @@ namespace po = boost::program_options;
 
 #define MAX_PACKET_SIZE 65535
 
-#define ntohll(x) ((((uint64_t)ntohl(x)) << 32) + ntohl((x) >> 32))
+#define ntohll(x) ((1==ntohl(1)) ? (x) : ((uint64_t)ntohl((x) & 0xFFFFFFFF) << 32) | ntohl((x) >> 32))
 
 uint8_t big_buff[MAX_PACKET_SIZE];
 std::atomic<bool> is_running(true);
@@ -36,36 +36,42 @@ CycleBuff *cycle_buff_ptr = new CycleBuff();
 
 int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
     po::options_description desc("Allowed options");
-    desc.add_options()
+		desc.add_options()
         ("help", "produce help message")
         ("DEST_ADDR,a", po::value<string>()->required(), "set sender's ip address")
         ("DATA_PORT,P", po::value<int>()->default_value(20000 + (438477 % 10000)), "set sender's port")
         ("BSIZE,b", po::value<int>()->default_value(65536), "set buffor size (in bytes)")
-    ;
-
-    po::store(po::parse_command_line(ac, av, desc), vm);
+    	;
+	try {
+    	po::store(po::parse_command_line(ac, av, desc), vm);
+		po::notify(vm);
+		int b = vm["BSIZE"].as<int>();
+        if (b <= 0 || vm["DATA_PORT"].as<int>() > 65536) {throw std::runtime_error("Invalid arguments");}
+	} catch (const std::exception& e)  {std::cerr << "Bad arguments " << desc; exit(1);}
+	if (!vm.count("DEST_ADDR")) {fatal("DEST_ADDR is required.");}
 
     if (vm.count("help")) {
         cout << desc << "\n";
         return 1;
     }
 
-    po::notify(vm);
     return 0;  
 }
 
 size_t get_first_byte_num() {
-	return ntohll(((uint64_t *) big_buff)[1]);
+	uint64_t first_byte_num = ((uint64_t *) big_buff)[1];
+	return htonll(first_byte_num);
 }
 
 size_t get_session_id() {
-	return ntohll(((uint64_t *) big_buff)[0]);
+	uint64_t session_id = ((uint64_t *) big_buff)[0];
+	return htonll(session_id);
 }
 
 size_t calculate_packet_number(size_t byte_zero, size_t first_byte_num, size_t psize) {
 	// We know that both byte_zero and first_byte_num are divisible by psize. Packets are numbered from 0.
 	assert(first_byte_num >= byte_zero);
-	return ((first_byte_num - byte_zero) / (psize + 16));
+	return ((first_byte_num - byte_zero) / (psize));
 }
 
 void put_into_buff(size_t put_num, size_t newest_num, size_t psize) {
@@ -187,8 +193,6 @@ int main(int ac, char* av[]) {
 			continue;
 		size_t new_byte_zero = get_first_byte_num();
 		size_t new_session_id = get_session_id();
-		if (!(new_byte_zero % (psize_read + 16) == 0))
-			continue;
 		if (new_session_id > session_id) {
 			std::unique_lock lk(cycle_buff_ptr->_mutex);
 			session_id = new_session_id;
@@ -208,6 +212,7 @@ int main(int ac, char* av[]) {
 			}
 			first_byte_num = new_byte_zero;
 		}
+
 		std::unique_lock lk(cycle_buff_ptr->_mutex);
 		packet_number = calculate_packet_number(byte_zero, first_byte_num, psize_read);
 		put_into_buff(packet_number, last_packet_num_received, psize_read);
@@ -219,4 +224,5 @@ int main(int ac, char* av[]) {
 		lk.unlock();
 	}
 	_send_thread.join();
+	return 0;
 }
