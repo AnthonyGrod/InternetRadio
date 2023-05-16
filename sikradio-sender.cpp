@@ -18,7 +18,7 @@
 using namespace std;
 namespace po = boost::program_options;
 
-#define htonll(x) ((((uint64_t)htonl(x)) << 32) + htonl((x) >> 32))
+#define ntohll(x) ((1==ntohl(1)) ? (x) : ((uint64_t)ntohl((x) & 0xFFFFFFFF) << 32) | ntohl((x) >> 32))
 
 void print_packet(uint8_t *p) {
     for (int i = 16; i < 16 + 512; i++) {
@@ -28,22 +28,26 @@ void print_packet(uint8_t *p) {
 
 int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
     po::options_description desc("Allowed options");
-    desc.add_options()
+        desc.add_options()
         ("help", "produce help message")
         ("DEST_ADDR,a", po::value<string>()->required(), "set receiver ip address")
         ("DATA_PORT,P", po::value<int>()->default_value(20000 + (438477 % 10000)), "set receiver port")
         ("NAME,n", po::value<string>()->default_value("Nienazwany Nadajnik"), "set sender's name")
         ("PSIZE,p", po::value<int>()->default_value(512), "set package size (in bytes)")
-    ;
-
-    po::store(po::parse_command_line(ac, av, desc), vm);
+        ;
+    try {
+    	po::store(po::parse_command_line(ac, av, desc), vm);
+		po::notify(vm);
+        int p = vm["PSIZE"].as<int>();
+        if (p <= 0 || p > 65536 || vm["DATA_PORT"].as<int>() > 65536) {throw std::runtime_error("Invalid arguments");}
+	} catch (const std::exception& e)  {std::cerr << "Bad arguments " << desc; exit(1);}
+	if (!vm.count("DEST_ADDR")) {fatal("DEST_ADDR is required.");}
 
     if (vm.count("help")) {
         cout << desc << "\n";
-        return 1;
+        return 0;
     }
 
-    po::notify(vm);
     return 0;  
 }
 
@@ -116,8 +120,8 @@ int main(int ac, char* av[]) {
         if (length % psize != 0 && feof(stdin)) {
             break;
         }
-        size_t htonll_session_id = htonll(session_id);
-        size_t htonll_first_byte_num = htonll(first_byte_num);
+        size_t htonll_session_id = ntohll(session_id);
+        size_t htonll_first_byte_num = ntohll(first_byte_num);
         memcpy(buffer, &htonll_session_id, 8);
         memcpy(buffer + 8, &htonll_first_byte_num, 8);
         // send message to receiver
@@ -127,4 +131,5 @@ int main(int ac, char* av[]) {
     
     // close socket
     close(socket_fd);
+    return 0;
 }
