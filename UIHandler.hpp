@@ -11,6 +11,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <thread>
+#include <mutex>
 
 #define CLEAR_SCREEN "\033[2J\033[H"
 
@@ -18,6 +19,8 @@ class UIHandler {
 private:
     static std::vector<std::string> radioStations;
     static int selectedStationIndex;
+    static std::mutex selectionMutex;
+    static std::vector<int> clientSockets;
 
 public:
     UIHandler() {
@@ -34,15 +37,17 @@ public:
     }
 
     void moveSelectionUp(int clientSocket) {
+        std::lock_guard<std::mutex> lock(selectionMutex);
         if (selectedStationIndex > 0)
             --selectedStationIndex;
-        displayRadioUI(clientSocket);
+        broadcastUIUpdate();
     }
 
     void moveSelectionDown(int clientSocket) {
+        std::lock_guard<std::mutex> lock(selectionMutex);
         if (selectedStationIndex < radioStations.size() - 1)
             ++selectedStationIndex;
-        displayRadioUI(clientSocket);
+        broadcastUIUpdate();
     }
 
     char readKey() {
@@ -89,11 +94,15 @@ public:
 
     static void handleCommand(const std::string& command) {
         if (command == "next") {
+            std::lock_guard<std::mutex> lock(selectionMutex);
             if (selectedStationIndex < radioStations.size() - 1)
                 ++selectedStationIndex;
+            broadcastUIUpdate();
         } else if (command == "prev") {
+            std::lock_guard<std::mutex> lock(selectionMutex);
             if (selectedStationIndex > 0)
                 --selectedStationIndex;
+            broadcastUIUpdate();
         }
     }
 
@@ -119,6 +128,9 @@ public:
         UIHandler uiHandler;
         uiHandler.displayRadioUI(clientSocket);
 
+        // std::lock_guard<std::mutex> lock(selectionMutex);
+        clientSockets.push_back(clientSocket);
+
         while (true) {
             memset(buffer, 0, sizeof(buffer));
             ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
@@ -132,7 +144,6 @@ public:
 
             command += buffer;
 
-            std::cout << "chuj" << std::endl;
             command = trim(command);
             if (!command.empty()) {
                 if (command == "exit") {
@@ -140,17 +151,31 @@ public:
                     break;
                 } else if (command == "\033[A") { // Up arrow key
                     uiHandler.moveSelectionUp(clientSocket);
+                    broadcastUIUpdate();
                 } else if (command == "\033[B") { // Down arrow key
                     uiHandler.moveSelectionDown(clientSocket);
+                    broadcastUIUpdate();
                 }
-                
-                std::string uiOutput = generateTelnetUIOutput();
-                send(clientSocket, uiOutput.c_str(), uiOutput.length(), 0);
+
+                command.clear();
             }
-            command.clear();
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(selectionMutex);
+            clientSockets.erase(std::remove(clientSockets.begin(), clientSockets.end(), clientSocket), clientSockets.end());
         }
 
         close(clientSocket);
+    }
+
+    void static broadcastUIUpdate() {
+        std::string uiOutput = generateTelnetUIOutput();
+
+        // std::lock_guard<std::mutex> lock(selectionMutex);
+        for (int clientSocket : clientSockets) {
+            send(clientSocket, uiOutput.c_str(), uiOutput.length(), 0);
+        }
     }
 
     void static runTelnetServer() {
@@ -194,7 +219,7 @@ public:
             }
 
             std::string clientIP = inet_ntoa(clientAddress.sin_addr);
-            write(clientSocket,"\377\375\042\377\373\001",6);
+            write(clientSocket, "\377\375\042\377\373\001", 6);
             std::cout << "New Telnet connection from " << clientIP << std::endl;
 
             // Create a new thread to handle the Telnet connection
@@ -212,3 +237,5 @@ std::vector<std::string> UIHandler::radioStations = {
     "Radio \"Disco Pruszkow\""
 };
 int UIHandler::selectedStationIndex = 0;
+std::mutex UIHandler::selectionMutex;
+std::vector<int> UIHandler::clientSockets;
