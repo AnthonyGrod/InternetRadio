@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string>
 #include <unistd.h>
+#include <thread>
 #include <arpa/inet.h>
 #include <boost/program_options.hpp>
 #include <netinet/in.h>
@@ -34,6 +35,7 @@ int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
         ("DATA_PORT,P", po::value<int>()->default_value(20000 + (438477 % 10000)), "set receiver port")
         ("NAME,n", po::value<string>()->default_value("Nienazwany Nadajnik"), "set sender's name")
         ("PSIZE,p", po::value<int>()->default_value(512), "set package size (in bytes)")
+        ("CTRL_PORT,C", po::value<int>()->default_value(30000 + (438477 % 10000)), "set control port")
         ;
     try {
     	po::store(po::parse_command_line(ac, av, desc), vm);
@@ -84,6 +86,41 @@ sockaddr_in get_send_address(char *host, uint16_t port) {
     return send_address;
 }
 
+void lookup_thread() {
+    // Set socket on control port with any address
+    int socket_fd = socket(PF_INET, SOCK_DGRAM, 0);
+    if (socket_fd < 0) {
+        PRINT_ERRNO();
+    }
+    int opt = 1;
+    CHECK(setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)));
+    bind_socket(socket_fd, 30000 + (438477 % 10000));
+
+    while (1) {
+        struct sockaddr_in client_address;
+        socklen_t client_address_len = sizeof(client_address);
+        uint8_t buffer[1 << 16];
+        ssize_t packet_len = recvfrom(socket_fd, buffer, sizeof(buffer), 0,
+                                      (struct sockaddr *) &client_address, &client_address_len);
+        if (packet_len < 0) {
+            PRINT_ERRNO();
+        }
+        printf("2. Received lookup message \n");
+        // Check if received message is "ZERO_SEVEN_COME_IN\n"
+        if (packet_len == 19 && strncmp((char *) buffer, "ZERO_SEVEN_COME_IN\n", 19) == 0) {
+            // Send "ROGER THAT\n" to client
+            char message[] = "BOREWICZ_HERE 239.10.11.1 28477 chuj\n";
+            ssize_t sent_len = sendto(socket_fd, message, sizeof(message) - 1, 0,
+                                      (struct sockaddr *) &client_address, client_address_len);
+            printf("3. Sent answer for lookupmessage\n\n");
+            if (sent_len < 0) {
+                PRINT_ERRNO();
+            }
+        }
+    }
+}
+
+
 int main(int ac, char* av[]) {
     // Declare the supported options.
     po::variables_map vm;
@@ -111,11 +148,14 @@ int main(int ac, char* av[]) {
         PRINT_ERRNO();
     }
 
+    std::thread lookup_thrd = std::thread(lookup_thread);
+
     size_t session_id = time(NULL);
     size_t first_byte_num = 0;
     while (1) {
         // read message from stdin and store it in uint8_t[512] data
         // parse session_id and first_byte_num
+        // std::cout << "Reading from stdin" << std::endl;
         size_t length = fread(buffer + 16, 1, psize, stdin);
         if (length % psize != 0 && feof(stdin)) {
             break;

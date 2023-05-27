@@ -165,6 +165,57 @@ size_t read_message(int socket_fd, struct sockaddr_in *client_address, uint8_t *
     return (size_t) len;
 }
 
+// Sending broadcast lookup messages
+void scanner(int socket_fd) {
+    struct addrinfo hint = {0}, *res;
+    hint.ai_family = AF_INET;
+    hint.ai_socktype = SOCK_DGRAM;
+    if (getaddrinfo("255.255.255.255",  NULL, &hint, &res) != 0) {fatal("getaddrinfo");}
+
+    struct sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(38477);
+    addr.sin_addr = ((struct sockaddr_in *) res->ai_addr)->sin_addr;
+    freeaddrinfo(res);
+
+    while (1) {
+        char message[20] = "ZERO_SEVEN_COME_IN\n";
+        if (sendto(socket_fd, message, 19, 0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {fatal("sendto");}
+        std::cerr << "1. Sent lookup message" << std::endl;
+        sleep(5);
+    }
+}
+
+// Receiving lookup messages
+void receive_lookup(int socket_fd) {
+    while (1) {
+        struct sockaddr_in client_address;
+        socklen_t client_address_len = sizeof(client_address);
+        uint8_t buffer[1 << 16];
+        ssize_t packet_len = recvfrom(socket_fd, buffer, sizeof(buffer), 0,
+                                      (struct sockaddr *)&client_address, &client_address_len);
+		
+
+        if (packet_len < 0) {
+            PRINT_ERRNO();
+        }
+
+        // Convert the received message buffer to a string
+        std::string received_message(reinterpret_cast<char *>(buffer), packet_len);
+        if (received_message == "BOREWICZ_HERE 239.10.11.1 28477 chuj\n") {
+            std::string response_message = "BOREWICZ_HERE 239.10.11.1 28477 chuj\n";
+            ssize_t sent_len = sendto(socket_fd, response_message.c_str(), response_message.length(), 0,
+                                      (struct sockaddr *)&client_address, client_address_len);
+            std::cerr << "4. Received lookup response from " << inet_ntoa(client_address.sin_addr) << std::endl << std::endl;
+            if (sent_len < 0) {
+                PRINT_ERRNO();
+            }
+        }
+    }
+}
+
+// void receiver_thread()
+
 
 int main(int ac, char* av[]) {
 	po::variables_map vm;
@@ -180,7 +231,11 @@ int main(int ac, char* av[]) {
 	char* address = new char[dest_addr_str.size() + 1];
 	strcpy(address, dest_addr_str.c_str());
 	struct sockaddr_in connected_client_address = get_address(address, data_port);
+	int ctrl_socket = create_broadcast_reuse_socket();
+
 	std::thread _send_thread = std::thread(print_buffer);
+	std::thread _lookup_thread = std::thread(scanner, ctrl_socket);
+	std::thread _receive_thread = std::thread(receive_lookup, ctrl_socket);
 	while (first_session_read) {
 		psize_read = read_message(socket_fd, &client_address, big_buff, MAX_PACKET_SIZE);
 
