@@ -31,40 +31,40 @@ public:
         disableRawMode();
     }
 
-    void displayRadioUI(int clientSocket) {
+    static void displayRadioUI(int clientSocket) {
         std::string uiOutput = generateTelnetUIOutput();
         send(clientSocket, uiOutput.c_str(), uiOutput.length(), 0);
     }
 
-    void moveSelectionUp(int clientSocket) {
+    static void moveSelectionUp(int clientSocket) {
         std::lock_guard<std::mutex> lock(selectionMutex);
         if (selectedStationIndex > 0)
             --selectedStationIndex;
         broadcastUIUpdate();
     }
 
-    void moveSelectionDown(int clientSocket) {
+    static void moveSelectionDown(int clientSocket) {
         std::lock_guard<std::mutex> lock(selectionMutex);
         if (selectedStationIndex < radioStations.size() - 1)
             ++selectedStationIndex;
         broadcastUIUpdate();
     }
 
-    char readKey() {
+    static char readKey() {
         char c = '\0';
         if (read(STDIN_FILENO, &c, 1) == -1)
             std::cerr << "Failed to read input character" << std::endl;
         return c;
     }
 
-    void enableRawMode() {
+    static void enableRawMode() {
         struct termios raw;
         tcgetattr(STDIN_FILENO, &raw);
         raw.c_lflag &= ~(ECHO | ICANON);
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
     }
 
-    void disableRawMode() {
+    static void disableRawMode() {
         struct termios raw;
         tcgetattr(STDIN_FILENO, &raw);
         raw.c_lflag |= (ECHO | ICANON);
@@ -106,7 +106,7 @@ public:
         }
     }
 
-    std::string static trim(const std::string& str) {
+    static std::string trim(const std::string& str) {
         // Find the first non-whitespace character
         auto start = str.find_first_not_of(" \t\r\n");
 
@@ -169,7 +169,7 @@ public:
         close(clientSocket);
     }
 
-    void static broadcastUIUpdate() {
+    static void broadcastUIUpdate() {
         std::string uiOutput = generateTelnetUIOutput();
 
         // std::lock_guard<std::mutex> lock(selectionMutex);
@@ -178,7 +178,7 @@ public:
         }
     }
 
-    void static runTelnetServer() {
+    static void runTelnetServer() {
         // Create a socket for the server
         int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
         if (serverSocket == -1) {
@@ -229,13 +229,23 @@ public:
 
         close(serverSocket); // Close the server socket
     }
+
+    static void addRadioStation(const std::string& radioStation) {
+        std::lock_guard<std::mutex> lock(selectionMutex);
+        radioStations.push_back(radioStation);
+        UIHandler uiHandler;
+        uiHandler.broadcastUIUpdate();
+    }
+
+    static void removeRadioStation(std::string radioStation) {
+        std::lock_guard<std::mutex> lock(selectionMutex);
+        radioStations.erase(std::remove(radioStations.begin(), radioStations.end(), radioStation), radioStations.end());
+        UIHandler uiHandler;
+        uiHandler.broadcastUIUpdate();
+    }
 };
 
-std::vector<std::string> UIHandler::radioStations = {
-    "PR1",
-    "Radio \"357\"",
-    "Radio \"Disco Pruszkow\""
-};
+std::vector<std::string> UIHandler::radioStations = {};
 int UIHandler::selectedStationIndex = 0;
 std::mutex UIHandler::selectionMutex;
 std::vector<int> UIHandler::clientSockets;
