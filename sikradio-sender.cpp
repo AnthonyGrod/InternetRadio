@@ -86,33 +86,41 @@ sockaddr_in get_send_address(char *host, uint16_t port) {
     return send_address;
 }
 
-void lookup_thread() {
+void lookup_thread(uint32_t ctrl_port, std::string name) {
     // Set socket on control port with any address
-    int socket_fd = socket(PF_INET, SOCK_DGRAM, 0);
+    int socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (socket_fd < 0) {
         PRINT_ERRNO();
     }
     int opt = 1;
     CHECK(setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)));
-    bind_socket(socket_fd, 30000 + (438477 % 10000));
+    opt = 1;
+    CHECK(setsockopt(socket_fd, SOL_SOCKET, SO_BROADCAST, &opt, sizeof(opt)));
+    opt = 1;
+    CHECK(setsockopt(socket_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)));
+    opt = 1;
+    CHECK(setsockopt(socket_fd, IPPROTO_IP, IP_MULTICAST_TTL, &opt, sizeof(opt)));
+    bind_socket(socket_fd, 38477);
 
     while (1) {
         struct sockaddr_in client_address;
         socklen_t client_address_len = sizeof(client_address);
         uint8_t buffer[1 << 16];
+        memset(buffer, 0, sizeof(buffer));
         ssize_t packet_len = recvfrom(socket_fd, buffer, sizeof(buffer), 0,
                                       (struct sockaddr *) &client_address, &client_address_len);
         if (packet_len < 0) {
             PRINT_ERRNO();
         }
-        printf("2. Received lookup message \n");
+        printf("2. Received lookup message: %s \n", buffer);
         // Check if received message is "ZERO_SEVEN_COME_IN\n"
         if (packet_len == 19 && strncmp((char *) buffer, "ZERO_SEVEN_COME_IN\n", 19) == 0) {
             // Send "ROGER THAT\n" to client
-            char message[] = "BOREWICZ_HERE 239.10.11.1 28477 chuj\n";
-            ssize_t sent_len = sendto(socket_fd, message, sizeof(message) - 1, 0,
+            std::string message = "BOREWICZ_HERE 239.10.11.1 38477 " + name;
+            message = message + "\n";
+            ssize_t sent_len = sendto(socket_fd, message.c_str(), message.length(), 0,
                                       (struct sockaddr *) &client_address, client_address_len);
-            printf("3. Sent answer for lookupmessage\n\n");
+            printf("3. Sent answer for lookupmessage: %s\n\n", message.c_str());
             if (sent_len < 0) {
                 PRINT_ERRNO();
             }
@@ -148,7 +156,7 @@ int main(int ac, char* av[]) {
         PRINT_ERRNO();
     }
 
-    std::thread lookup_thrd = std::thread(lookup_thread);
+    std::thread lookup_thrd = std::thread(lookup_thread, 30000 + (438477 % 10000), name);
 
     size_t session_id = time(NULL);
     size_t first_byte_num = 0;
@@ -171,5 +179,6 @@ int main(int ac, char* av[]) {
     
     // close socket
     close(socket_fd);
+    lookup_thrd.join();
     return 0;
 }

@@ -2,6 +2,7 @@
 #include <iostream>
 #include <netdb.h>
 #include <string>
+#include <regex>
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -18,6 +19,7 @@
 #include "err.h"
 #include "common.h"
 #include "CycleBuff.hpp"
+#include "UIHandler.hpp"
 
 using namespace std;
 namespace po = boost::program_options;
@@ -41,6 +43,7 @@ int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
         ("DEST_ADDR,a", po::value<string>()->required(), "set sender's ip address")
         ("DATA_PORT,P", po::value<int>()->default_value(20000 + (438477 % 10000)), "set sender's port")
         ("BSIZE,b", po::value<int>()->default_value(65536), "set buffor size (in bytes)")
+		("NAME,n", po::value<string>()->default_value("Nienazwany Nadajnik"), "set sender's name")
     	;
 	try {
     	po::store(po::parse_command_line(ac, av, desc), vm);
@@ -58,21 +61,25 @@ int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
     return 0;  
 }
 
+
 size_t get_first_byte_num() {
 	uint64_t first_byte_num = ((uint64_t *) big_buff)[1];
 	return htonll(first_byte_num);
 }
+
 
 size_t get_session_id() {
 	uint64_t session_id = ((uint64_t *) big_buff)[0];
 	return htonll(session_id);
 }
 
+
 size_t calculate_packet_number(size_t byte_zero, size_t first_byte_num, size_t psize) {
 	// We know that both byte_zero and first_byte_num are divisible by psize. Packets are numbered from 0.
 	assert(first_byte_num >= byte_zero);
 	return ((first_byte_num - byte_zero) / (psize));
 }
+
 
 void put_into_buff(size_t put_num, size_t newest_num, size_t psize) {
 	if (put_num > newest_num) {
@@ -129,6 +136,7 @@ void put_into_buff(size_t put_num, size_t newest_num, size_t psize) {
 	}
 }
 
+
 void print_buffer() {
 	size_t helper = 0;
 	while (is_running) {
@@ -153,6 +161,7 @@ void print_buffer() {
 	}
 }
 
+
 size_t read_message(int socket_fd, struct sockaddr_in *client_address, uint8_t *buffer, size_t max_length) {
     socklen_t address_length = (socklen_t) sizeof(*client_address);
     int flags = 0; // we do not request anything special
@@ -164,6 +173,7 @@ size_t read_message(int socket_fd, struct sockaddr_in *client_address, uint8_t *
     }
     return (size_t) len;
 }
+
 
 // Sending broadcast lookup messages
 void scanner(int socket_fd) {
@@ -191,39 +201,44 @@ void receive_lookup(int socket_fd) {
     while (1) {
         struct sockaddr_in client_address;
         socklen_t client_address_len = sizeof(client_address);
-        uint8_t buffer[1 << 16];
+        char buffer[1 << 16];
+		memset(buffer, 0, sizeof(buffer));
         ssize_t packet_len = recvfrom(socket_fd, buffer, sizeof(buffer), 0,
                                       (struct sockaddr *)&client_address, &client_address_len);
 		
-
+		printf("Received message: %s\n", buffer);
         if (packet_len < 0) {
             PRINT_ERRNO();
         }
 
         // Convert the received message buffer to a string
         std::string received_message(reinterpret_cast<char *>(buffer), packet_len);
-        if (received_message == "BOREWICZ_HERE 239.10.11.1 28477 chuj\n") {
-            std::string response_message = "BOREWICZ_HERE 239.10.11.1 28477 chuj\n";
-            ssize_t sent_len = sendto(socket_fd, response_message.c_str(), response_message.length(), 0,
-                                      (struct sockaddr *)&client_address, client_address_len);
+		std::regex pattern("^(BOREWICZ_HERE)\\s(\\S+)\\s(\\d+)\\s([\\x20-\\x7F]+)\\n$");
+    	std::smatch matches;
+
+		std::cout << "1111111jfdskjfjkdlsjfls" << std::endl;
+		std::string input((char *) buffer);
+		std::cout << input << std::endl;
+		if (std::regex_match(input, matches, pattern)) {
+			std::cout << "2222222jfdskjfjkdlsjfls" << std::endl;
+			std::string station_addr = matches[2].str();
+			std::string station_port = matches[3].str();
+			std::string station_name = matches[4].str();
+			UIHandler::addRadioStation(station_name);
+
+            // std::string response_message = "BOREWICZ_HERE 239.10.11.1 28477 chuj\n";
+            // ssize_t sent_len = sendto(socket_fd, response_message.c_str(), response_message.length(), 0,
+            //                           (struct sockaddr *)&client_address, client_address_len);
             std::cerr << "4. Received lookup response from " << inet_ntoa(client_address.sin_addr) << std::endl << std::endl;
-            if (sent_len < 0) {
-                PRINT_ERRNO();
-            }
+            // if (sent_len < 0) {
+            //     PRINT_ERRNO();
+            // }
         }
     }
 }
 
-// void receiver_thread()
 
-
-int main(int ac, char* av[]) {
-	po::variables_map vm;
-    if (set_parsed_arguments(vm, ac, av) == 1)
-        return 1;
-    string dest_addr_str = vm["DEST_ADDR"].as<string>();
-    int data_port = vm["DATA_PORT"].as<int>();
-    size_t bsize = vm["BSIZE"].as<int>();
+void receiver(int data_port, string dest_addr_str, size_t bsize, std::string name) {
 	int socket_fd = bind_socket(data_port);
 	size_t session_id = 0, byte_zero = 0, first_byte_num = 0, prev_psize_read = MAX_PACKET_SIZE + 420;
 	bool first_session_read = true;
@@ -231,11 +246,9 @@ int main(int ac, char* av[]) {
 	char* address = new char[dest_addr_str.size() + 1];
 	strcpy(address, dest_addr_str.c_str());
 	struct sockaddr_in connected_client_address = get_address(address, data_port);
-	int ctrl_socket = create_broadcast_reuse_socket();
 
 	std::thread _send_thread = std::thread(print_buffer);
-	std::thread _lookup_thread = std::thread(scanner, ctrl_socket);
-	std::thread _receive_thread = std::thread(receive_lookup, ctrl_socket);
+
 	while (first_session_read) {
 		psize_read = read_message(socket_fd, &client_address, big_buff, MAX_PACKET_SIZE);
 
@@ -279,5 +292,36 @@ int main(int ac, char* av[]) {
 		lk.unlock();
 	}
 	_send_thread.join();
+}
+
+// void add_radio_station_thread() {}
+// void remove_radio_station_thread() {}
+
+void control_thread(int socket_fd, int data_port, string dest_addr_str, size_t bsize, std::string name) {
+	std::thread scanner_thread(scanner, socket_fd);
+	std::thread receive_lookup_thread(receive_lookup, socket_fd);
+    std::thread serverThread(&UIHandler::runTelnetServer);
+	std::thread receiver_thread(receiver, data_port, dest_addr_str, bsize, name);
+
+	UIHandler::addRadioStation("Radio Maryja");
+	UIHandler::addRadioStation("Radio Zet");
+
+	serverThread.join();
+	scanner_thread.join();
+	receive_lookup_thread.join();
+}
+
+
+int main(int ac, char* av[]) {
+	po::variables_map vm;
+    if (set_parsed_arguments(vm, ac, av) == 1)
+        return 1;
+    string dest_addr_str = vm["DEST_ADDR"].as<string>();
+    int data_port = vm["DATA_PORT"].as<int>();
+    size_t bsize = vm["BSIZE"].as<int>();
+	std::string name = vm["NAME"].as<string>();
+	int ctrl_socket = create_broadcast_reuse_socket();
+	std::thread _control_thread = std::thread(control_thread, ctrl_socket, data_port, dest_addr_str, bsize, name);
+	_control_thread.join();
 	return 0;
 }

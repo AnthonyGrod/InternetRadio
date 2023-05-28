@@ -427,6 +427,10 @@ CMakeFiles/sikradio-receiver.dir/sikradio-receiver.cpp.o: /Users/agrodowski/Desk
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/sys/_types/_sa_family_t.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/sys/_types/_iovec_t.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/netinet6/in6.h \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/c++/v1/regex \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/c++/v1/deque \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/c++/v1/__split_buffer \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/c++/v1/vector \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/unistd.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/sys/unistd.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/sys/_types/_posix_vdisable.h \
@@ -468,8 +472,6 @@ CMakeFiles/sikradio-receiver.dir/sikradio-receiver.cpp.o: /Users/agrodowski/Desk
   /opt/homebrew/include/boost/config/detail/cxx_composite.hpp \
   /opt/homebrew/include/boost/version.hpp \
   /opt/homebrew/include/boost/program_options/errors.hpp \
-  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/c++/v1/vector \
-  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/c++/v1/__split_buffer \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/c++/v1/map \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/c++/v1/__functional/is_transparent.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/c++/v1/__node_handle \
@@ -1011,8 +1013,22 @@ CMakeFiles/sikradio-receiver.dir/sikradio-receiver.cpp.o: /Users/agrodowski/Desk
   /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/14.0.0/include/stdbool.h \
   /Users/agrodowski/Desktop/MIM/IVSEM/SIK/ZAL2/InternetRadio/common.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/signal.h \
-  /Users/agrodowski/Desktop/MIM/IVSEM/SIK/ZAL2/InternetRadio/CycleBuff.hpp
+  /Users/agrodowski/Desktop/MIM/IVSEM/SIK/ZAL2/InternetRadio/CycleBuff.hpp \
+  /Users/agrodowski/Desktop/MIM/IVSEM/SIK/ZAL2/InternetRadio/UIHandler.hpp \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/termios.h \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/sys/termios.h \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/sys/ttycom.h \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/sys/ioccom.h \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/sys/ttydefaults.h
 
+
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/sys/ioccom.h:
+
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/sys/ttycom.h:
+
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/sys/termios.h:
+
+/Users/agrodowski/Desktop/MIM/IVSEM/SIK/ZAL2/InternetRadio/UIHandler.hpp:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/signal.h:
 
@@ -1280,6 +1296,8 @@ CMakeFiles/sikradio-receiver.dir/sikradio-receiver.cpp.o: /Users/agrodowski/Desk
 
 /opt/homebrew/include/boost/mpl/aux_/full_lambda.hpp:
 
+/opt/homebrew/include/boost/mpl/aux_/preprocessed/gcc/bind.hpp:
+
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/c++/v1/stdexcept:
 
 /opt/homebrew/include/boost/mpl/bind_fwd.hpp:
@@ -1295,8 +1313,6 @@ CMakeFiles/sikradio-receiver.dir/sikradio-receiver.cpp.o: /Users/agrodowski/Desk
 /opt/homebrew/include/boost/preprocessor/array/data.hpp:
 
 /opt/homebrew/include/boost/mpl/has_xxx.hpp:
-
-/opt/homebrew/include/boost/mpl/aux_/preprocessed/gcc/bind.hpp:
 
 /opt/homebrew/include/boost/mpl/aux_/has_apply.hpp:
 
@@ -1526,6 +1542,8 @@ CMakeFiles/sikradio-receiver.dir/sikradio-receiver.cpp.o: /Users/agrodowski/Desk
 
 /opt/homebrew/include/boost/preprocessor/detail/auto_rec.hpp:
 
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/termios.h:
+
 /opt/homebrew/include/boost/mpl/protect.hpp:
 
 /opt/homebrew/include/boost/preprocessor/cat.hpp:
@@ -1586,16 +1604,6 @@ CMakeFiles/sikradio-receiver.dir/sikradio-receiver.cpp.o: /Users/agrodowski/Desk
 
 /opt/homebrew/include/boost/limits.hpp:
 
-/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/sys/_types/_gid_t.h:
-
-/opt/homebrew/include/boost/mpl/aux_/common_name_wknd.hpp:
-
-/opt/homebrew/include/boost/preprocessor/tuple/elem.hpp:
-
-/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/c++/v1/__algorithm/is_permutation.h:
-
-/opt/homebrew/include/boost/integer_fwd.hpp:
-
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/_types/_uint32_t.h:
 
 /opt/homebrew/include/boost/integer.hpp:
@@ -1603,6 +1611,8 @@ CMakeFiles/sikradio-receiver.dir/sikradio-receiver.cpp.o: /Users/agrodowski/Desk
 /opt/homebrew/include/boost/mpl/aux_/preprocessed/gcc/or.hpp:
 
 /opt/homebrew/include/boost/function/function_base.hpp:
+
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/c++/v1/deque:
 
 /opt/homebrew/include/boost/function/detail/prologue.hpp:
 
@@ -1866,18 +1876,6 @@ CMakeFiles/sikradio-receiver.dir/sikradio-receiver.cpp.o: /Users/agrodowski/Desk
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/c++/v1/map:
 
-/opt/homebrew/include/boost/mpl/aux_/preprocessed/gcc/apply_wrap.hpp:
-
-/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/sys/_types/_mach_port_t.h:
-
-/opt/homebrew/include/boost/preprocessor/punctuation/is_begin_parens.hpp:
-
-/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/machine/limits.h:
-
-/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/c++/v1/__algorithm/generate.h:
-
-/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/c++/v1/vector:
-
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/c++/v1/__algorithm/search.h:
 
 /opt/homebrew/include/boost/mp11/detail/mp_list.hpp:
@@ -1969,6 +1967,30 @@ CMakeFiles/sikradio-receiver.dir/sikradio-receiver.cpp.o: /Users/agrodowski/Desk
 /opt/homebrew/include/boost/smart_ptr/detail/local_sp_deleter.hpp:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/unistd.h:
+
+/opt/homebrew/include/boost/mpl/aux_/preprocessed/gcc/apply_wrap.hpp:
+
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/sys/_types/_mach_port_t.h:
+
+/opt/homebrew/include/boost/preprocessor/punctuation/is_begin_parens.hpp:
+
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/machine/limits.h:
+
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/c++/v1/__algorithm/generate.h:
+
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/c++/v1/vector:
+
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/sys/_types/_gid_t.h:
+
+/opt/homebrew/include/boost/mpl/aux_/common_name_wknd.hpp:
+
+/opt/homebrew/include/boost/preprocessor/tuple/elem.hpp:
+
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/c++/v1/__algorithm/is_permutation.h:
+
+/opt/homebrew/include/boost/integer_fwd.hpp:
+
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/c++/v1/regex:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/netinet6/in6.h:
 
@@ -2141,6 +2163,8 @@ CMakeFiles/sikradio-receiver.dir/sikradio-receiver.cpp.o: /Users/agrodowski/Desk
 /opt/homebrew/include/boost/preprocessor/arithmetic/detail/maximum_number.hpp:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/c++/v1/__bit_reference:
+
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/sys/ttydefaults.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/sys/_types/_int32_t.h:
 

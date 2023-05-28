@@ -66,7 +66,6 @@ CMAKE_BINARY_DIR = /Users/agrodowski/Desktop/MIM/IVSEM/SIK/ZAL2/InternetRadio/bu
 all: CMakeFiles/sikradio-receiver.dir/all
 all: CMakeFiles/sikradio-sender.dir/all
 all: CMakeFiles/lookup.dir/all
-all: CMakeFiles/uidemo.dir/all
 .PHONY : all
 
 # The main recursive "preinstall" target.
@@ -77,7 +76,6 @@ preinstall:
 clean: CMakeFiles/sikradio-receiver.dir/clean
 clean: CMakeFiles/sikradio-sender.dir/clean
 clean: CMakeFiles/lookup.dir/clean
-clean: CMakeFiles/uidemo.dir/clean
 .PHONY : clean
 
 #=============================================================================
@@ -157,32 +155,6 @@ lookup: CMakeFiles/lookup.dir/rule
 CMakeFiles/lookup.dir/clean:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lookup.dir/build.make CMakeFiles/lookup.dir/clean
 .PHONY : CMakeFiles/lookup.dir/clean
-
-#=============================================================================
-# Target rules for target CMakeFiles/uidemo.dir
-
-# All Build rule for target.
-CMakeFiles/uidemo.dir/all:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/uidemo.dir/build.make CMakeFiles/uidemo.dir/depend
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/uidemo.dir/build.make CMakeFiles/uidemo.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/Users/agrodowski/Desktop/MIM/IVSEM/SIK/ZAL2/InternetRadio/build/CMakeFiles --progress-num=7,8 "Built target uidemo"
-.PHONY : CMakeFiles/uidemo.dir/all
-
-# Build rule for subdir invocation for target.
-CMakeFiles/uidemo.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/agrodowski/Desktop/MIM/IVSEM/SIK/ZAL2/InternetRadio/build/CMakeFiles 2
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/uidemo.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/agrodowski/Desktop/MIM/IVSEM/SIK/ZAL2/InternetRadio/build/CMakeFiles 0
-.PHONY : CMakeFiles/uidemo.dir/rule
-
-# Convenience name for target.
-uidemo: CMakeFiles/uidemo.dir/rule
-.PHONY : uidemo
-
-# clean rule for target.
-CMakeFiles/uidemo.dir/clean:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/uidemo.dir/build.make CMakeFiles/uidemo.dir/clean
-.PHONY : CMakeFiles/uidemo.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

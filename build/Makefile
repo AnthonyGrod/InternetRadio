@@ -155,19 +155,6 @@ lookup/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lookup.dir/build.make CMakeFiles/lookup.dir/build
 .PHONY : lookup/fast
 
-#=============================================================================
-# Target rules for targets named uidemo
-
-# Build rule for target.
-uidemo: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 uidemo
-.PHONY : uidemo
-
-# fast build rule for target.
-uidemo/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/uidemo.dir/build.make CMakeFiles/uidemo.dir/build
-.PHONY : uidemo/fast
-
 lookup.o: lookup.cpp.o
 .PHONY : lookup.o
 
@@ -240,30 +227,6 @@ sikradio-sender.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/sikradio-sender.dir/build.make CMakeFiles/sikradio-sender.dir/sikradio-sender.cpp.s
 .PHONY : sikradio-sender.cpp.s
 
-uidemo.o: uidemo.cpp.o
-.PHONY : uidemo.o
-
-# target to build an object file
-uidemo.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/uidemo.dir/build.make CMakeFiles/uidemo.dir/uidemo.cpp.o
-.PHONY : uidemo.cpp.o
-
-uidemo.i: uidemo.cpp.i
-.PHONY : uidemo.i
-
-# target to preprocess a source file
-uidemo.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/uidemo.dir/build.make CMakeFiles/uidemo.dir/uidemo.cpp.i
-.PHONY : uidemo.cpp.i
-
-uidemo.s: uidemo.cpp.s
-.PHONY : uidemo.s
-
-# target to generate assembly for a file
-uidemo.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/uidemo.dir/build.make CMakeFiles/uidemo.dir/uidemo.cpp.s
-.PHONY : uidemo.cpp.s
-
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -275,7 +238,6 @@ help:
 	@echo "... lookup"
 	@echo "... sikradio-receiver"
 	@echo "... sikradio-sender"
-	@echo "... uidemo"
 	@echo "... lookup.o"
 	@echo "... lookup.i"
 	@echo "... lookup.s"
@@ -285,9 +247,6 @@ help:
 	@echo "... sikradio-sender.o"
 	@echo "... sikradio-sender.i"
 	@echo "... sikradio-sender.s"
-	@echo "... uidemo.o"
-	@echo "... uidemo.i"
-	@echo "... uidemo.s"
 .PHONY : help
 
 
