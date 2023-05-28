@@ -203,8 +203,9 @@ void receive_lookup(int socket_fd) {
         socklen_t client_address_len = sizeof(client_address);
         char buffer[1 << 16];
 		memset(buffer, 0, sizeof(buffer));
-        ssize_t packet_len = recvfrom(socket_fd, buffer, sizeof(buffer), 0,
-                                      (struct sockaddr *)&client_address, &client_address_len);
+        ssize_t packet_len = recvfromWithTimeout(socket_fd, buffer, sizeof(buffer), 0,
+                                      (struct sockaddr *)&client_address, &client_address_len, 2);
+									
 		
 		printf("Received message: %s\n", buffer);
         if (packet_len < 0) {
@@ -216,24 +217,19 @@ void receive_lookup(int socket_fd) {
 		std::regex pattern("^(BOREWICZ_HERE)\\s(\\S+)\\s(\\d+)\\s([\\x20-\\x7F]+)\\n$");
     	std::smatch matches;
 
-		std::cout << "1111111jfdskjfjkdlsjfls" << std::endl;
 		std::string input((char *) buffer);
-		std::cout << input << std::endl;
 		if (std::regex_match(input, matches, pattern)) {
-			std::cout << "2222222jfdskjfjkdlsjfls" << std::endl;
 			std::string station_addr = matches[2].str();
 			std::string station_port = matches[3].str();
 			std::string station_name = matches[4].str();
-			UIHandler::addRadioStation(station_name);
-
-            // std::string response_message = "BOREWICZ_HERE 239.10.11.1 28477 chuj\n";
-            // ssize_t sent_len = sendto(socket_fd, response_message.c_str(), response_message.length(), 0,
-            //                           (struct sockaddr *)&client_address, client_address_len);
+			RadioStation radio_station(station_name, station_addr, std::stoi(station_port));
+			if (!(UIHandler::doesRadioStationExist(radio_station))) {
+				UIHandler::addRadioStation(radio_station);
+			}
             std::cerr << "4. Received lookup response from " << inet_ntoa(client_address.sin_addr) << std::endl << std::endl;
-            // if (sent_len < 0) {
-            //     PRINT_ERRNO();
-            // }
         }
+
+		UIHandler::removeInactiveRadioStations();
     }
 }
 
@@ -303,8 +299,11 @@ void control_thread(int socket_fd, int data_port, string dest_addr_str, size_t b
     std::thread serverThread(&UIHandler::runTelnetServer);
 	std::thread receiver_thread(receiver, data_port, dest_addr_str, bsize, name);
 
-	UIHandler::addRadioStation("Radio Maryja");
-	UIHandler::addRadioStation("Radio Zet");
+	RadioStation radio_station1("Radio Maryja", "localhost", 20000);
+	RadioStation radio_station2("Radio Zet", "localhost", 20000);
+
+	UIHandler::addRadioStation(radio_station1);
+	UIHandler::addRadioStation(radio_station2);
 
 	serverThread.join();
 	scanner_thread.join();

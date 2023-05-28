@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <arpa/inet.h>
 #include <signal.h>
+#include <chrono>
+#include <iostream>
 
 #include "err.h"
 
@@ -298,3 +300,24 @@ int create_broadcast_reuse_socket() {
 }
 
 
+int recvfromWithTimeout(int sockfd, void* buffer, size_t length, int flags, struct sockaddr* addr, socklen_t* addrlen, int timeout) {
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(sockfd, &fds);
+
+    struct timeval tv;
+    tv.tv_sec = timeout;
+    tv.tv_usec = 0;
+
+    int result = select(sockfd + 1, &fds, nullptr, nullptr, &tv);
+    if (result == -1) {
+        std::cerr << "Error in select" << std::endl;
+        return -1;
+    } else if (result == 0) {
+        // Timeout reached
+        std::cerr << "Timeout reached" << std::endl;
+        return 0;
+    }
+
+    return recvfrom(sockfd, buffer, length, flags, addr, addrlen);
+}

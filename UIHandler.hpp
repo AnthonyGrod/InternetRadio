@@ -4,6 +4,7 @@
 #include <vector>
 #include <cstdlib>
 #include <cstdio>
+#include <chrono>
 #include <cstring>
 #include <unistd.h>
 #include <termios.h>
@@ -13,11 +14,13 @@
 #include <thread>
 #include <mutex>
 
+#include "RadioStation.hpp"
+
 #define CLEAR_SCREEN "\033[2J\033[H"
 
 class UIHandler {
 private:
-    static std::vector<std::string> radioStations;
+    static std::vector<RadioStation> radioStations;
     static int selectedStationIndex;
     static std::mutex selectionMutex;
     static std::vector<int> clientSockets;
@@ -84,12 +87,22 @@ public:
                 output += " > ";
             else
                 output += "   ";
-            output += radioStations[i] + "\r\n";
+            output += radioStations[i].name + "\r\n";
         }
 
         output += "------------------------------------------------------------------------\r\n";
 
         return output;
+    }
+
+    static bool doesRadioStationExist(RadioStation& radioStation) {
+        std::lock_guard<std::mutex> lock(selectionMutex);
+        bool res = std::find(radioStations.begin(), radioStations.end(), radioStation) != radioStations.end();
+        if (res) {
+            auto it = std::find(radioStations.begin(), radioStations.end(), radioStation);
+            it->last_received_lookup_seconds = time(NULL);
+        }
+        return res;
     }
 
     static void handleCommand(const std::string& command) {
@@ -230,22 +243,37 @@ public:
         close(serverSocket); // Close the server socket
     }
 
-    static void addRadioStation(const std::string& radioStation) {
+    static void addRadioStation(const RadioStation& radioStation) {
         std::lock_guard<std::mutex> lock(selectionMutex);
         radioStations.push_back(radioStation);
-        UIHandler uiHandler;
-        uiHandler.broadcastUIUpdate();
+        broadcastUIUpdate();
     }
 
-    static void removeRadioStation(std::string radioStation) {
+    static void removeRadioStation(RadioStation radioStation) {
         std::lock_guard<std::mutex> lock(selectionMutex);
         radioStations.erase(std::remove(radioStations.begin(), radioStations.end(), radioStation), radioStations.end());
-        UIHandler uiHandler;
-        uiHandler.broadcastUIUpdate();
+        broadcastUIUpdate();
+    }
+
+    static void removeInactiveRadioStations() {
+        auto currentTime = std::chrono::system_clock::now();
+
+        for (auto it = radioStations.begin(); it != radioStations.end();) {
+            auto lastLookupTime = std::chrono::time_point<std::chrono::system_clock>(std::chrono::seconds(it->last_received_lookup_seconds));
+            auto elapsedTime = std::chrono::duration_cast<std::chrono::seconds>(currentTime - lastLookupTime).count();
+
+            if (elapsedTime >= 20) {
+                std::lock_guard<std::mutex> lock(selectionMutex);
+                it = radioStations.erase(it);
+                broadcastUIUpdate();
+            } else {
+                ++it;
+            }
+        }
     }
 };
 
-std::vector<std::string> UIHandler::radioStations = {};
+std::vector<RadioStation> UIHandler::radioStations = {};
 int UIHandler::selectedStationIndex = 0;
 std::mutex UIHandler::selectionMutex;
 std::vector<int> UIHandler::clientSockets;
