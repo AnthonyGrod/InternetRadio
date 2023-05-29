@@ -36,6 +36,8 @@ size_t packet_number = 0;
 
 RadioStation selected_radio_station = RadioStation();
 
+int socket_receive_music_fd = socket(AF_INET, SOCK_DGRAM, 0);
+
 CycleBuff *cycle_buff_ptr = new CycleBuff();
 
 int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
@@ -140,11 +142,22 @@ void put_into_buff(size_t put_num, size_t newest_num, size_t psize) {
 void print_buffer() {
 	size_t helper = 0;
 	while (is_running) {
+		std::cerr << "debug6" << std::endl;
 		std::unique_lock lk(cycle_buff_ptr->_mutex);
+		std::cerr << "debug7" << std::endl;
 
 		cycle_buff_ptr->_cond.wait(lk, []{
-			return (cycle_buff_ptr->_was_three_quarters_full_flag && !cycle_buff_ptr->is_empty()); 
+			std::cerr << "is_running inside cond: " << is_running << std::endl;
+			return ((cycle_buff_ptr->_was_three_quarters_full_flag && !cycle_buff_ptr->is_empty()) || !is_running); 
 		});
+		std::cerr << "debug8" << std::endl;
+		if (!is_running) {
+			std::cerr << "debug9" << std::endl;
+			lk.unlock();
+			std::cerr << "debug10" << std::endl;
+			return;
+		}
+		std::cerr << "debug11" << std::endl;
 
 		// Copying data from operational buffer to local buffer
 		std::vector<uint8_t> local_buffer(psize_read);
@@ -203,7 +216,7 @@ void receive_lookup(int socket_fd) {
                                       (struct sockaddr *)&client_address, &client_address_len, 2);
 									
 		
-		printf("Received message: %s\n", buffer);
+		// printf("Received message: %s\n", buffer);
         if (packet_len < 0) {
             PRINT_ERRNO();
         }
@@ -229,67 +242,7 @@ void receive_lookup(int socket_fd) {
     }
 }
 
-// void receiver_v2(size_t bsize) {
-// 	int socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
-// 	if (socket_fd < 0) {
-// 		PRINT_ERRNO();
-// 	}
-//     struct addrinfo addrinfo;
-//     struct addrinfo hints;
-//     memset(&hints, 0, sizeof(hints));
-//     hints.ai_family = AF_INET;
-//     hints.ai_socktype = SOCK_DGRAM;
-//     hints.ai_flags = AI_PASSIVE;
-
-// 	struct ip_mreq mreq;
-
-// 	size_t session_id = 0, byte_zero = 0, first_byte_num = 0, prev_psize_read = MAX_PACKET_SIZE + 420;
-// 	bool running = true;
-// 	struct sockaddr_in client_address;
-
-// 	std::thread _send_thread = std::thread(print_buffer);
-
-// 	// Create a file descriptor set to be used with select()
-//     fd_set readFds;
-//     int maxFd = std::max(socket_fd, pipefd[0]) + 1;
-
-// 	while (running) {
-// 		FD_ZERO(&readFds);
-//         FD_SET(socket_fd, &readFds);
-//         FD_SET(pipefd[0], &readFds);
-// 		int readyFds = select(maxFd, &readFds, nullptr, nullptr, nullptr);
-// 		if (readyFds == -1) {
-//             std::cerr << "Failed to select" << std::endl;
-//             return;
-//         }
-// 		if (FD_ISSET(pipefd[0], &readFds)) {
-//             // Handle message from UIHandler pipe
-//             int message;
-//             if (read(pipefd[0], &message, sizeof(message)) == -1) {
-//                 std::cerr << "Failed to read from pipe" << std::endl;
-//                 return;
-//             }
-//             // Process the received message
-//             std::lock_guard<std::mutex> lock(selectionMutex);
-// 			if (UIHandler::getSelectedStationIndex() != message) {
-// 				// switch to new station
-// 				selected_radio_station = UIHandler::getRadioStation(message);
-
-// 			}
-//         }
-// 		else {
-// 			// We continue reading from the socket from selected_radio_station
-// 			psize_read = read_message(socket_fd, &client_address, big_buff, MAX_PACKET_SIZE);
-// 		}
-// 	}
-
-// }
-
 void receiver(size_t bsize) {
-	int socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
-	if (socket_fd < 0) {
-		PRINT_ERRNO();
-	}
     struct addrinfo addrinfo;
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
@@ -301,43 +254,63 @@ void receiver(size_t bsize) {
 
 	size_t session_id = 0, byte_zero = 0, first_byte_num = 0, prev_psize_read = MAX_PACKET_SIZE + 420;
 	bool running = true;
+	is_running = true;
 	struct sockaddr_in client_address;
 
 	std::thread _send_thread = std::thread(print_buffer);
 
 	// Create a file descriptor set to be used with select()
     fd_set readFds;
-    int maxFd = std::max(socket_fd, UIHandler::pipefd[0]) + 1;
+    int maxFd = std::max(socket_receive_music_fd, UIHandler::pipefd[0]) + 1;
 
 	while (running) {
+		std::cerr << "debug1" << std::endl;
 		FD_ZERO(&readFds);
-        FD_SET(socket_fd, &readFds);
+        FD_SET(socket_receive_music_fd, &readFds);
         FD_SET(UIHandler::pipefd[0], &readFds);
+		std::cerr << "Current radiostation is " << selected_radio_station.name << " "  << selected_radio_station.ip_address << " on port " << selected_radio_station.port << std::endl;
 		int readyFds = select(maxFd, &readFds, nullptr, nullptr, nullptr);
+		std::cerr << "debug2" << std::endl;
 		if (readyFds == -1) {
             std::cerr << "Failed to select" << std::endl;
             return;
         }
 		if (FD_ISSET(UIHandler::pipefd[0], &readFds)) {
             // Handle message from UIHandler pipe
+			std::cerr << "debug3" << std::endl;
             int message;
             if (read(UIHandler::pipefd[0], &message, sizeof(message)) == -1) {
                 std::cerr << "Failed to read from pipe" << std::endl;
                 return;
             }
+			close(socket_receive_music_fd);
+			socket_receive_music_fd = socket(AF_INET, SOCK_DGRAM, 0);
+			RadioStation radio_station = UIHandler::getRadioStation(message);
+			selected_radio_station.name = radio_station.name;
+			selected_radio_station.ip_address = radio_station.ip_address;
+			selected_radio_station.port = radio_station.port;
+			std::cerr << "New radio station is " << selected_radio_station.name << " "  << selected_radio_station.ip_address << " on port " << selected_radio_station.port << std::endl;
+			std::cerr << "debug4" << std::endl;
+			is_running = false;
+			std::cerr << "is_running = " << is_running << std::endl;
+			std::cerr << "message: " << message << std::endl;
 			// The selected station has changed, break from the loop
 			mreq.imr_multiaddr.s_addr =  inet_addr(selected_radio_station.ip_address.c_str()); // od tego co przyjmuje
 			mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-			setsockopt(socket_fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq));
+			setsockopt(socket_receive_music_fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq));
 			int enable = 1;
-			setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
+			setsockopt(socket_receive_music_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
 			enable = 1;
-			setsockopt(socket_fd, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
+			setsockopt(socket_receive_music_fd, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
+			bind_socket(socket_receive_music_fd, selected_radio_station.port);
 			running = false;
+			is_running = false;
+			cycle_buff_ptr->_cond.notify_one();
 			break;
         }
 
-		psize_read = read_message(socket_fd, &client_address, big_buff, MAX_PACKET_SIZE);
+		psize_read = read_message(socket_receive_music_fd, &client_address, big_buff, MAX_PACKET_SIZE);
+		std::cerr << "received music of size " << psize_read << std::endl;
 		if (psize_read < 16 || psize_read == SIZE_MAX)
 			continue;
 		psize_read -= 16;
@@ -375,7 +348,9 @@ void receiver(size_t bsize) {
 		}
 		lk.unlock();
 	}
+	std::cerr << "debug5" << std::endl;
 	_send_thread.join();
+	std::cerr << "debug8" << std::endl;
 }
 
 void control_thread(int socket_fd, size_t bsize) {
@@ -383,14 +358,15 @@ void control_thread(int socket_fd, size_t bsize) {
 	std::thread receive_lookup_thread(receive_lookup, socket_fd);
     std::thread serverThread(&UIHandler::runTelnetServer);
 
-	RadioStation radio_station1("Radio Maryja", "localhost", 20000);
-	RadioStation radio_station2("Radio Zet", "localhost", 20000);
+	// RadioStation radio_station1("Radio Maryja", "localhost", 20000);
+	// RadioStation radio_station2("Radio Zet", "localhost", 20000);
 
-	UIHandler::addRadioStation(radio_station1);
-	UIHandler::addRadioStation(radio_station2);
+	// UIHandler::addRadioStation(radio_station1);
+	// UIHandler::addRadioStation(radio_station2);
 
 	while (1) {
 		std::thread receiver_thread(receiver, bsize);
+		std::cerr << "Creating new receiver thread" << std::endl;
 
 		receiver_thread.join();
 	}

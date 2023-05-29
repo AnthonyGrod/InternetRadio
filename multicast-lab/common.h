@@ -144,7 +144,6 @@ inline static void send_message(int socket_fd, const void *message, size_t lengt
     errno = 0;
     ssize_t sent_length = send(socket_fd, message, length, flags);
     if (sent_length < 0) {
-        printf("test\n");
         PRINT_ERRNO();
     }
     ENSURE(sent_length == (ssize_t) length);

@@ -26,7 +26,7 @@ int main() {
     while (1) {
         char message[20] = "ZERO_SEVEN_COME_IN\n";
         if (sendto(sock, message, 19, 0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {fatal("sendto");}
-        std::cout << "sent" << std::endl;
+        // std::cout << "sent" << std::endl;
         sleep(5);
     }
 }

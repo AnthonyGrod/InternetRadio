@@ -168,7 +168,6 @@ inline static void send_message(int socket_fd, const void *message, size_t lengt
     errno = 0;
     ssize_t sent_length = send(socket_fd, message, length, flags);
     if (sent_length < 0) {
-        printf("test\n");
         PRINT_ERRNO();
     }
     ENSURE(sent_length == (ssize_t) length);
@@ -240,7 +239,6 @@ void receive_multicast_message(const char* multicast_address, uint16_t local_por
     /* Read the received messages */
     char buffer[BSIZE];
     size_t received_length = receive_message(socket_fd, buffer, sizeof(buffer), NO_FLAGS);
-    printf("read %zd bytes: %.*s\n", received_length, (int)received_length, buffer);
 
     // /* Leave the multicast group */
     // CHECK_ERRNO(setsockopt(socket_fd, IPPROTO_IP, IP_DROP_MEMBERSHIP, (void*)&ip_mreq, sizeof(ip_mreq)));

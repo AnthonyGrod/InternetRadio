@@ -152,7 +152,7 @@ public:
                 std::cerr << "Failed to read data from client" << std::endl;
                 break;
             } else if (bytesRead == 0) {
-                std::cout << "Telnet client disconnected" << std::endl;
+                std::cerr << "Telnet client disconnected" << std::endl;
                 break;
             }
 
@@ -161,7 +161,7 @@ public:
             command = trim(command);
             if (!command.empty()) {
                 if (command == "exit") {
-                    std::cout << "Telnet client requested to exit" << std::endl;
+                    std::cerr << "Telnet client requested to exit" << std::endl;
                     break;
                 } else if (command == "\033[A") { // Up arrow key
                     uiHandler.moveSelectionUp(clientSocket);
@@ -185,6 +185,7 @@ public:
 
     static void notifySelectedStationChanged(int selectedStationIndex) {
         // std::string message = "selected " + std::to_string(selectedStationIndex);
+        std::cerr << "Sending notify message about selected station change" << std::endl;
         if (write(pipefd[1], &selectedStationIndex, sizeof(selectedStationIndex)) == -1) {
             std::cerr << "Failed to write to pipe" << std::endl;
             exit(EXIT_FAILURE);
@@ -230,7 +231,7 @@ public:
             return;
         }
 
-        std::cout << "Telnet server is running. Waiting for connections..." << std::endl;
+        std::cerr << "Telnet server is running. Waiting for connections..." << std::endl;
 
         while (true) {
             // Accept incoming connection
@@ -244,7 +245,7 @@ public:
 
             std::string clientIP = inet_ntoa(clientAddress.sin_addr);
             write(clientSocket, "\377\375\042\377\373\001", 6);
-            std::cout << "New Telnet connection from " << clientIP << std::endl;
+            std::cerr << "New Telnet connection from " << clientIP << std::endl;
 
             // Create a new thread to handle the Telnet connection
             std::thread telnetThread(handleTelnetClient, clientSocket);

@@ -115,15 +115,15 @@ void lookup_thread(uint32_t ctrl_port, std::string name) {
         if (packet_len < 0) {
             PRINT_ERRNO();
         }
-        printf("2. Received lookup message: %s \n", buffer);
+        std::cerr << "2. Received lookup message: " << buffer << std::endl;
         // Check if received message is "ZERO_SEVEN_COME_IN\n"
         if (packet_len == 19 && strncmp((char *) buffer, "ZERO_SEVEN_COME_IN\n", 19) == 0) {
-            // Send "ROGER THAT\n" to client
-            std::string message = "BOREWICZ_HERE 239.10.11.1 38477 " + name;
+            std::string message = "BOREWICZ_HERE 239.10.11.1 2137 " + name;
             message = message + "\n";
             ssize_t sent_len = sendto(socket_fd, message.c_str(), message.length(), 0,
                                       (struct sockaddr *) &client_address, client_address_len);
-            printf("3. Sent answer for lookupmessage: %s\n\n", message.c_str());
+            
+            std::cerr << "3. Sent answer for lookupmessage: " << message << std::endl;
             if (sent_len < 0) {
                 PRINT_ERRNO();
             }
