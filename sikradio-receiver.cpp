@@ -44,11 +44,9 @@ int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
     po::options_description desc("Allowed options");
 		desc.add_options()
         ("help", "produce help message")
-        // ("DEST_ADDR,a", po::value<string>()->required(), "set sender's ip address")
 		("CTRL_PORT,C", po::value<int>()->default_value(30000 + (438477 % 10000)), "set control port")
 		("UI_PORT,U", po::value<int>()->default_value(10000 + (438477 % 10000)), "set UI port")
 		("DISCOVER_ADDR,d", po::value<string>()->default_value("255.255.255.255"))
-        ("DATA_PORT,P", po::value<int>()->default_value(20000 + (438477 % 10000)), "set sender's port")
         ("BSIZE,b", po::value<int>()->default_value(65536), "set buffor size (in bytes)")
 		("NAME,n", po::value<string>()->default_value("Nienazwany Nadajnik"), "set sender's name")
 		("RTIME,R", po::value<int>()->default_value(250), "set retransmission time (in ms)")
@@ -57,8 +55,8 @@ int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
     	po::store(po::parse_command_line(ac, av, desc), vm);
 		po::notify(vm);
 		int b = vm["BSIZE"].as<int>();
-        if (b <= 0 || vm["DATA_PORT"].as<int>() > 65536) {throw std::runtime_error("Invalid arguments");}
-	} catch (const std::exception& e)  {std::cerr << "Bad arguments " << desc; exit(1);}
+        if (b <= 0) {throw std::runtime_error("Invalid arguments");}
+	} catch (const std::exception& e)  {std::cerr << "Bad argumentssss " << desc; exit(1);}
 
     if (vm.count("help")) {
         cout << desc << "\n";
@@ -179,11 +177,11 @@ size_t read_message(int socket_fd, struct sockaddr_in *client_address, uint8_t *
     return (size_t) len;
 }
 
-void scanner(int socket_fd) {
+void scanner(int socket_fd, std::string discover_addr) {
     struct addrinfo hint = {0}, *res;
     hint.ai_family = AF_INET;
     hint.ai_socktype = SOCK_DGRAM;
-    if (getaddrinfo("255.255.255.255",  NULL, &hint, &res) != 0) {fatal("getaddrinfo");} //TODO
+    if (getaddrinfo(discover_addr.c_str(),  NULL, &hint, &res) != 0) {fatal("getaddrinfo");} //TODO
 
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
@@ -340,7 +338,7 @@ void receiver(size_t bsize) {
 }
 
 void control_thread(int ctrl_socket, size_t bsize, std::string discover_addr, int ui_port) {
-	std::thread scanner_thread(scanner, ctrl_socket);
+	std::thread scanner_thread(scanner, ctrl_socket, discover_addr);
 	std::thread receive_lookup_thread(receive_lookup, ctrl_socket);
     std::thread serverThread(&UIHandler::runTelnetServer);
 
@@ -366,5 +364,7 @@ int main(int ac, char* av[]) {
 	int ui_port = vm["UI_PORT"].as<int>();
 	std::thread _control_thread = std::thread(control_thread, ctrl_socket, bsize, discover_addr, ui_port);
 	_control_thread.join();
+	close(ctrl_socket);
+	close(socket_receive_music_fd);
 	return 0;
 }

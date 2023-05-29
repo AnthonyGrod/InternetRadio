@@ -31,8 +31,7 @@ int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
     po::options_description desc("Allowed options");
         desc.add_options()
         ("help", "produce help message")
-        // ("MULTICAST_ADDR,m", po::value<string>()->required(), "set multicast ip address")
-        ("DEST_ADDR,a", po::value<string>()->required(), "set receiver ip address")
+        ("MCAST_ADDR,a", po::value<string>()->required(), "set multicast address")
         ("DATA_PORT,P", po::value<int>()->default_value(20000 + (438477 % 10000)), "set receiver port")
         ("NAME,n", po::value<string>()->default_value("Nienazwany Nadajnik"), "set sender's name")
         ("PSIZE,p", po::value<int>()->default_value(512), "set package size (in bytes)")
@@ -46,7 +45,7 @@ int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
         int p = vm["PSIZE"].as<int>();
         if (p <= 0 || p > 65536 || vm["DATA_PORT"].as<int>() > 65536) {throw std::runtime_error("Invalid arguments");}
 	} catch (const std::exception& e)  {std::cerr << "Bad arguments " << desc; exit(1);}
-	if (!vm.count("DEST_ADDR")) {fatal("DEST_ADDR is required.");}
+	if (!vm.count("MCAST_ADDR")) {fatal("DEST_ADDR is required.");}
 
     if (vm.count("help")) {
         cout << desc << "\n";
@@ -89,7 +88,7 @@ sockaddr_in get_send_address(char *host, uint16_t port) {
     return send_address;
 }
 
-void lookup_thread(uint32_t ctrl_port, std::string name, uint32_t data_port) {
+void lookup_thread(uint32_t ctrl_port, std::string name, uint32_t data_port, std::string multicast_address) {
     // Set socket on control port with any address
     int socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (socket_fd < 0) {
@@ -119,9 +118,8 @@ void lookup_thread(uint32_t ctrl_port, std::string name, uint32_t data_port) {
         // Check if received message is "ZERO_SEVEN_COME_IN\n"
         if (packet_len == 19 && strncmp((char *) buffer, "ZERO_SEVEN_COME_IN\n", 19) == 0) {
             std::stringstream messagess;
-            messagess << "BOREWICZ_HERE " << "239.10.11.1" << " " << data_port << " " << name << "\n";
+            messagess << "BOREWICZ_HERE " << multicast_address.c_str() << " " << data_port << " " << name << "\n";
             std::string message = messagess.str();
-            // std::string message = "BOREWICZ_HERE 239.10.11.1 2137 " + name;
             ssize_t sent_len = sendto(socket_fd, message.c_str(), message.length(), 0,
                                       (struct sockaddr *) &client_address, client_address_len);
             
@@ -139,13 +137,11 @@ int main(int ac, char* av[]) {
     if (set_parsed_arguments(vm, ac, av) == 1) {
         return 1;
     }
-    string dest_addr_str = vm["DEST_ADDR"].as<string>();
+    string dest_addr_str = vm["MCAST_ADDR"].as<string>();
     int data_port = vm["DATA_PORT"].as<int>();
     string name = vm["NAME"].as<string>();
     int psize = vm["PSIZE"].as<int>();
 
-    // allocate memmnory for message.
-    // First 8 bytes: uint64 session_id, Second 8 bytes: uint64 first_byte_num, Third 512 bytes: uint8_t[512] data
     uint8_t buffer[psize + 16];
 
     int dest_addr_len = dest_addr_str.length();
@@ -165,14 +161,11 @@ int main(int ac, char* av[]) {
     int enable = 1;
     setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
 
-    std::thread lookup_thrd = std::thread(lookup_thread, 30000 + (438477 % 10000), name, data_port);
+    std::thread lookup_thrd = std::thread(lookup_thread, 30000 + (438477 % 10000), name, data_port, dest_addr_str);
 
     size_t session_id = time(NULL);
     size_t first_byte_num = 0;
     while (1) {
-        // read message from stdin and store it in uint8_t[512] data
-        // parse session_id and first_byte_num
-        // std::cout << "Reading from stdin" << std::endl;
         size_t length = fread(buffer + 16, 1, psize, stdin);
         if (length % psize != 0 && feof(stdin)) {
             break;
