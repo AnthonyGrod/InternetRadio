@@ -15,6 +15,7 @@
 
 #include "err.h"
 #include "common.h"
+#include "RadioStation.hpp"
 
 using namespace std;
 namespace po = boost::program_options;
@@ -52,6 +53,9 @@ int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
             port > 65535 || c > 65535) {
             throw std::runtime_error("Invalid arguments");
         }
+        if (!RadioStation::isNameValid(vm["NAME"].as<string>()) || !RadioStation::isValidMulticastIPv4(vm["MCAST_ADDR"].as<string>())) {
+			throw std::runtime_error("Invalid name");
+		}
 	} catch (...)  {std::cerr << "Bad arguments " << desc; exit(1);}
 	if (!vm.count("MCAST_ADDR")) {fatal("DEST_ADDR is required.");}
 

@@ -62,6 +62,14 @@ int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
         if (c <= 0 || b <= 0 || r <= 0 || u <= 0 || u > 65535 || c > 65535) {
             throw std::runtime_error("Invalid arguments");
         }
+		if (!RadioStation::isNameValid(vm["NAME"].as<string>()) || !RadioStation::isValidIPv4Address(vm["DISCOVER_ADDR"].as<string>())) {
+			if (!RadioStation::isNameValid(vm["NAME"].as<string>())) {
+				std::cerr << "Invalid name" << std::endl;
+			} else {
+				std::cerr << "Invalid address" << std::endl;
+			}
+			throw std::runtime_error("Invalid name");
+		}
 	} catch (...)  {std::cerr << "Bad arguments " << desc; exit(1);}
 
     if (vm.count("help")) {
