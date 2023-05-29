@@ -24,4 +24,8 @@ public:
     bool operator==(const RadioStation &other) const {
         return this->name == other.name && this->ip_address == other.ip_address && this->port == other.port;
     }
+
+    static bool compareByName(const RadioStation& a, const RadioStation& b) {
+        return a.name < b.name;
+    }
 };

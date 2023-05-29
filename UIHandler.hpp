@@ -248,7 +248,9 @@ public:
     static void addRadioStation(const RadioStation& radioStation) {
         std::lock_guard<std::mutex> lock(selectionMutex);
         radioStations.push_back(radioStation);
-        // sort
+        RadioStation current = radioStations[selectedStationIndex];
+        std::sort(radioStations.begin(), radioStations.end(), RadioStation::compareByName);
+        selectedStationIndex = std::find(radioStations.begin(), radioStations.end(), current) - radioStations.begin();
         broadcastUIUpdate();
     }
 
@@ -263,7 +265,9 @@ public:
                 std::lock_guard<std::mutex> lock(selectionMutex);
                 it = radioStations.erase(it);
                 selectedStationIndex = 0;
-                // sort
+                RadioStation current = radioStations[selectedStationIndex];
+                std::sort(radioStations.begin(), radioStations.end(), RadioStation::compareByName);
+                selectedStationIndex = std::find(radioStations.begin(), radioStations.end(), current) - radioStations.begin();
                 broadcastUIUpdate();
             } else {
                 ++it;
@@ -278,4 +282,3 @@ int UIHandler::selectedStationIndex = 0;
 std::mutex UIHandler::selectionMutex;
 std::vector<int> UIHandler::clientSockets;
 int UIHandler::pipefd[2];
-
