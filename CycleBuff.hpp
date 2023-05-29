@@ -171,7 +171,7 @@ void CycleBuff::print_missing(size_t head_packet_num) {
 	size_t curr_packet_num = tail_packet_num;
 	for (size_t i = 0; i < _taken_capacity; i++) {
 		if (_is_missing[it] == true) {
-			std::cerr << "MISSING: BEFORE " << head_packet_num << " EXPECTED " << curr_packet_num << std::endl;
+			// std::cerr << "MISSING: BEFORE " << head_packet_num << " EXPECTED " << curr_packet_num << std::endl;
 		}
 		curr_packet_num++;
 		it = (it + 1) % _capacity;
