@@ -244,7 +244,6 @@ void receive_lookup(int socket_fd) {
 }
 
 void receiver(size_t bsize) {
-    struct addrinfo addrinfo;
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;

@@ -238,7 +238,7 @@ void receive_multicast_message(const char* multicast_address, uint16_t local_por
 
     /* Read the received messages */
     char buffer[BSIZE];
-    size_t received_length = receive_message(socket_fd, buffer, sizeof(buffer), NO_FLAGS);
+    receive_message(socket_fd, buffer, sizeof(buffer), NO_FLAGS);
 }
 
 void send_multicast_message(const char* remote_address, uint16_t remote_port, uint32_t BSIZE) {
@@ -265,10 +265,6 @@ void send_multicast_message(const char* remote_address, uint16_t remote_port, ui
 
     /* Bind the socket to the recipient's address and port to use write instead of sendto */
     connect_socket(socket_fd, &remote_sockaddr);
-
-    /* Joyful broadcasting of time */
-    char buffer[BSIZE];
-    time_t time_buffer;
 }
 
 int create_broadcast_reuse_socket() {
