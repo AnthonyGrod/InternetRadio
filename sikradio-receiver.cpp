@@ -55,9 +55,14 @@ int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
 	try {
     	po::store(po::parse_command_line(ac, av, desc), vm);
 		po::notify(vm);
-		int b = vm["BSIZE"].as<int>();
-        if (b <= 0) {throw std::runtime_error("Invalid arguments");}
-	} catch (const std::exception& e)  {std::cerr << "Bad arguments " << desc; exit(1);}
+        int c = vm["CTRL_PORT"].as<int>();
+        int b = vm["BSIZE"].as<int>();
+        int r = vm["RTIME"].as<int>();
+        int u = vm["UI_PORT"].as<int>();
+        if (c <= 0 || b <= 0 || r <= 0 || u <= 0 || u > 65535 || c > 65535) {
+            throw std::runtime_error("Invalid arguments");
+        }
+	} catch (...)  {std::cerr << "Bad arguments " << desc; exit(1);}
 
     if (vm.count("help")) {
         cout << desc << "\n";
@@ -237,20 +242,15 @@ void receiver(size_t bsize) {
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_flags = AI_PASSIVE;
-
     struct ip_mreq mreq;
-
 	size_t session_id = 0, byte_zero = 0, first_byte_num = 0, prev_psize_read = MAX_PACKET_SIZE + 420;
 	bool running = true;
 	is_running = true;
 	struct sockaddr_in client_address;
 
 	std::thread _send_thread = std::thread(print_buffer);
-
-	// Create a file descriptor set to be used with select()
     fd_set readFds;
     int maxFd = std::max(socket_receive_music_fd, UIHandler::pipefd[0]) + 1;
-
 	while (running) {
 		FD_ZERO(&readFds);
         FD_SET(socket_receive_music_fd, &readFds);
@@ -288,7 +288,6 @@ void receiver(size_t bsize) {
 			cycle_buff_ptr->_cond.notify_one();
 			break;
         }
-
 		psize_read = read_message(socket_receive_music_fd, &client_address, big_buff, MAX_PACKET_SIZE);
 		if (psize_read < 16 || psize_read == SIZE_MAX)
 			continue;
@@ -316,7 +315,6 @@ void receiver(size_t bsize) {
 			}
 			first_byte_num = new_byte_zero;
 		}
-
 		std::unique_lock lk(cycle_buff_ptr->_mutex);
 		packet_number = calculate_packet_number(byte_zero, first_byte_num, psize_read);
 		put_into_buff(packet_number, last_packet_num_received, psize_read);
@@ -334,13 +332,10 @@ void control_thread(int ctrl_socket, size_t bsize, std::string discover_addr, in
 	std::thread scanner_thread(scanner, ctrl_socket, discover_addr);
 	std::thread receive_lookup_thread(receive_lookup, ctrl_socket);
     std::thread serverThread(&UIHandler::runTelnetServer, ui_port);
-
 	while (1) {
 		std::thread receiver_thread(receiver, bsize);
-
 		receiver_thread.join();
 	}
-
 	serverThread.join();
 	scanner_thread.join();
 	receive_lookup_thread.join();

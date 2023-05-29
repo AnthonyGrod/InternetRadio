@@ -44,8 +44,15 @@ int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
     	po::store(po::parse_command_line(ac, av, desc), vm);
 		po::notify(vm);
         int p = vm["PSIZE"].as<int>();
-        if (p <= 0 || p > 65536 || vm["DATA_PORT"].as<int>() > 65536) {throw std::runtime_error("Invalid arguments");}
-	} catch (const std::exception& e)  {std::cerr << "Bad arguments " << desc; exit(1);}
+        int c = vm["CTRL_PORT"].as<int>();
+        int f = vm["FSIZE"].as<int>();
+        int r = vm["RTIME"].as<int>();
+        int port = vm["DATA_PORT"].as<int>();
+        if (p <= 0 || f <= 0 || r <= 0 || c <= 0 || port <= 0 || p > 65535 || 
+            port > 65535 || c > 65535) {
+            throw std::runtime_error("Invalid arguments");
+        }
+	} catch (...)  {std::cerr << "Bad arguments " << desc; exit(1);}
 	if (!vm.count("MCAST_ADDR")) {fatal("DEST_ADDR is required.");}
 
     if (vm.count("help")) {
