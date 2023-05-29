@@ -158,7 +158,7 @@ public:
 
             command = trim(command);
             if (!command.empty()) {
-                if (command == "exit") {
+                if (command == "q") {
                     break;
                 } else if (command == "\033[A") { // Up arrow key
                     uiHandler.moveSelectionUp(clientSocket);
