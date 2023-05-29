@@ -115,7 +115,6 @@ void lookup_thread(uint32_t ctrl_port, std::string name, uint32_t data_port, std
         if (packet_len < 0) {
             PRINT_ERRNO();
         }
-        std::cerr << "2. Received lookup message: " << buffer << std::endl;
         // Check if received message is "ZERO_SEVEN_COME_IN\n"
         if (packet_len == 19 && strncmp((char *) buffer, "ZERO_SEVEN_COME_IN\n", 19) == 0) {
             std::stringstream messagess;
@@ -124,7 +123,6 @@ void lookup_thread(uint32_t ctrl_port, std::string name, uint32_t data_port, std
             ssize_t sent_len = sendto(socket_fd, message.c_str(), message.length(), 0,
                                       (struct sockaddr *) &client_address, client_address_len);
             
-            std::cerr << "3. Sent answer for lookupmessage: " << message << std::endl;
             if (sent_len < 0) {
                 PRINT_ERRNO();
             }

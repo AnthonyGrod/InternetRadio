@@ -149,10 +149,8 @@ public:
             memset(buffer, 0, sizeof(buffer));
             ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
             if (bytesRead == -1) {
-                std::cerr << "Failed to read data from client" << std::endl;
                 break;
             } else if (bytesRead == 0) {
-                std::cerr << "Telnet client disconnected" << std::endl;
                 break;
             }
 
@@ -161,7 +159,6 @@ public:
             command = trim(command);
             if (!command.empty()) {
                 if (command == "exit") {
-                    std::cerr << "Telnet client requested to exit" << std::endl;
                     break;
                 } else if (command == "\033[A") { // Up arrow key
                     uiHandler.moveSelectionUp(clientSocket);
@@ -185,9 +182,7 @@ public:
 
     static void notifySelectedStationChanged(int selectedStationIndex) {
         // std::string message = "selected " + std::to_string(selectedStationIndex);
-        std::cerr << "Sending notify message about selected station change" << std::endl;
         if (write(pipefd[1], &selectedStationIndex, sizeof(selectedStationIndex)) == -1) {
-            std::cerr << "Failed to write to pipe" << std::endl;
             exit(EXIT_FAILURE);
         }
     }
@@ -207,7 +202,6 @@ public:
         // Create a socket for the server
         int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
         if (serverSocket == -1) {
-            std::cerr << "Failed to create socket" << std::endl;
             return;
         }
 
@@ -219,19 +213,15 @@ public:
 
         // Bind the socket to the server address
         if (bind(serverSocket, reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress)) == -1) {
-            std::cerr << "Failed to bind socket to address" << std::endl;
             close(serverSocket);
             return;
         }
 
         // Listen for incoming connections
         if (listen(serverSocket, SOMAXCONN) == -1) {
-            std::cerr << "Failed to listen for connections" << std::endl;
             close(serverSocket);
             return;
         }
-
-        std::cerr << "Telnet server is running. Waiting for connections..." << std::endl;
 
         while (true) {
             // Accept incoming connection
@@ -239,13 +229,11 @@ public:
             socklen_t clientAddressLength = sizeof(clientAddress);
             int clientSocket = accept(serverSocket, reinterpret_cast<sockaddr*>(&clientAddress), &clientAddressLength);
             if (clientSocket == -1) {
-                std::cerr << "Failed to accept incoming connection" << std::endl;
                 continue;
             }
 
             std::string clientIP = inet_ntoa(clientAddress.sin_addr);
             write(clientSocket, "\377\375\042\377\373\001", 6);
-            std::cerr << "New Telnet connection from " << clientIP << std::endl;
 
             // Create a new thread to handle the Telnet connection
             std::thread telnetThread(handleTelnetClient, clientSocket);
@@ -260,12 +248,7 @@ public:
     static void addRadioStation(const RadioStation& radioStation) {
         std::lock_guard<std::mutex> lock(selectionMutex);
         radioStations.push_back(radioStation);
-        broadcastUIUpdate();
-    }
-
-    static void removeRadioStation(RadioStation radioStation) {
-        std::lock_guard<std::mutex> lock(selectionMutex);
-        radioStations.erase(std::remove(radioStations.begin(), radioStations.end(), radioStation), radioStations.end());
+        // sort
         broadcastUIUpdate();
     }
 
@@ -279,6 +262,8 @@ public:
             if (elapsedTime >= 20) {
                 std::lock_guard<std::mutex> lock(selectionMutex);
                 it = radioStations.erase(it);
+                selectedStationIndex = 0;
+                // sort
                 broadcastUIUpdate();
             } else {
                 ++it;

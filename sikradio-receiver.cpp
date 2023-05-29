@@ -57,7 +57,7 @@ int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
 		po::notify(vm);
 		int b = vm["BSIZE"].as<int>();
         if (b <= 0) {throw std::runtime_error("Invalid arguments");}
-	} catch (const std::exception& e)  {std::cerr << "Bad argumentssss " << desc; exit(1);}
+	} catch (const std::exception& e)  {std::cerr << "Bad arguments " << desc; exit(1);}
 
     if (vm.count("help")) {
         cout << desc << "\n";
@@ -193,7 +193,6 @@ void scanner(int socket_fd, std::string discover_addr) {
     while (1) {
         char message[20] = "ZERO_SEVEN_COME_IN\n";
         if (sendto(socket_fd, message, 19, 0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {fatal("sendto");}
-        // std::cerr << "1. Sent lookup message to " << inet_ntoa(addr.sin_addr) << std::endl;
         sleep(5);
     }
 }
@@ -216,8 +215,6 @@ void receive_lookup(int socket_fd) {
 		std::regex pattern("^(BOREWICZ_HERE)\\s(\\S+)\\s(\\d+)\\s([\\x20-\\x7F]+)\\n$");
     	std::smatch matches;
 
-		std::cerr << "Received message: " << received_message << std::endl;
-
 		std::string input((char *) buffer);
 		if (std::regex_match(input, matches, pattern)) {
 			std::string station_addr = matches[2].str();
@@ -227,10 +224,7 @@ void receive_lookup(int socket_fd) {
 			if (!(UIHandler::doesRadioStationExist(radio_station))) {
 				UIHandler::addRadioStation(radio_station);
 			}
-            std::cerr << "4. Received lookup response from " << inet_ntoa(client_address.sin_addr) << std::endl << std::endl;
-        } else {
-			std::cerr << "Received message does not match the pattern" << std::endl;
-		}
+        }
 
 		UIHandler::removeInactiveRadioStations();
     }
@@ -261,7 +255,6 @@ void receiver(size_t bsize) {
 		FD_ZERO(&readFds);
         FD_SET(socket_receive_music_fd, &readFds);
         FD_SET(UIHandler::pipefd[0], &readFds);
-		// std::cerr << "Current radiostation is " << selected_radio_station.name << " "  << selected_radio_station.ip_address << " on port " << selected_radio_station.port << std::endl;
 		int readyFds = select(maxFd, &readFds, nullptr, nullptr, nullptr);
 		if (readyFds == -1) {
             std::cerr << "Failed to select" << std::endl;
@@ -280,7 +273,6 @@ void receiver(size_t bsize) {
 			selected_radio_station.name = radio_station.name;
 			selected_radio_station.ip_address = radio_station.ip_address;
 			selected_radio_station.port = radio_station.port;
-			std::cerr << "New radio station is " << selected_radio_station.name << " "  << selected_radio_station.ip_address << " on port " << selected_radio_station.port << std::endl;
 			is_running = false;
 			// The selected station has changed, break from the loop
 			mreq.imr_multiaddr.s_addr =  inet_addr(selected_radio_station.ip_address.c_str()); // od tego co przyjmuje

@@ -239,12 +239,6 @@ void receive_multicast_message(const char* multicast_address, uint16_t local_por
     /* Read the received messages */
     char buffer[BSIZE];
     size_t received_length = receive_message(socket_fd, buffer, sizeof(buffer), NO_FLAGS);
-
-    // /* Leave the multicast group */
-    // CHECK_ERRNO(setsockopt(socket_fd, IPPROTO_IP, IP_DROP_MEMBERSHIP, (void*)&ip_mreq, sizeof(ip_mreq)));
-
-    // /* Close the socket */
-    // CHECK_ERRNO(close(socket_fd));
 }
 
 void send_multicast_message(const char* remote_address, uint16_t remote_port, uint32_t BSIZE) {
@@ -275,13 +269,6 @@ void send_multicast_message(const char* remote_address, uint16_t remote_port, ui
     /* Joyful broadcasting of time */
     char buffer[BSIZE];
     time_t time_buffer;
-    // for (int i = 0; i < REPEAT_COUNT; ++i) {
-    //     time(&time_buffer);
-    //     strncpy(buffer, ctime(&time_buffer), BSIZE);
-    //     size_t length = strnlen(buffer, BSIZE);
-    //     send_message(socket_fd, buffer, length, NO_FLAGS);
-    //     sleep(SLEEP_TIME);
-    // }
 }
 
 int create_broadcast_reuse_socket() {
@@ -304,11 +291,8 @@ int recvfromWithTimeout(int sockfd, void* buffer, size_t length, int flags, stru
 
     int result = select(sockfd + 1, &fds, nullptr, nullptr, &tv);
     if (result == -1) {
-        std::cerr << "Error in select" << std::endl;
         return -1;
     } else if (result == 0) {
-        // Timeout reached
-        std::cerr << "Timeout reached" << std::endl;
         return 0;
     }
 
