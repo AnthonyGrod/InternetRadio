@@ -142,22 +142,15 @@ void put_into_buff(size_t put_num, size_t newest_num, size_t psize) {
 void print_buffer() {
 	size_t helper = 0;
 	while (is_running) {
-		std::cerr << "debug6" << std::endl;
 		std::unique_lock lk(cycle_buff_ptr->_mutex);
-		std::cerr << "debug7" << std::endl;
 
 		cycle_buff_ptr->_cond.wait(lk, []{
-			std::cerr << "is_running inside cond: " << is_running << std::endl;
 			return ((cycle_buff_ptr->_was_three_quarters_full_flag && !cycle_buff_ptr->is_empty()) || !is_running); 
 		});
-		std::cerr << "debug8" << std::endl;
 		if (!is_running) {
-			std::cerr << "debug9" << std::endl;
 			lk.unlock();
-			std::cerr << "debug10" << std::endl;
 			return;
 		}
-		std::cerr << "debug11" << std::endl;
 
 		// Copying data from operational buffer to local buffer
 		std::vector<uint8_t> local_buffer(psize_read);
@@ -190,7 +183,7 @@ void scanner(int socket_fd) {
     struct addrinfo hint = {0}, *res;
     hint.ai_family = AF_INET;
     hint.ai_socktype = SOCK_DGRAM;
-    if (getaddrinfo("255.255.255.255",  NULL, &hint, &res) != 0) {fatal("getaddrinfo");}
+    if (getaddrinfo("255.255.255.255",  NULL, &hint, &res) != 0) {fatal("getaddrinfo");} //TODO
 
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
@@ -201,7 +194,7 @@ void scanner(int socket_fd) {
     while (1) {
         char message[20] = "ZERO_SEVEN_COME_IN\n";
         if (sendto(socket_fd, message, 19, 0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {fatal("sendto");}
-        std::cerr << "1. Sent lookup message to " << inet_ntoa(addr.sin_addr) << std::endl;
+        // std::cerr << "1. Sent lookup message to " << inet_ntoa(addr.sin_addr) << std::endl;
         sleep(5);
     }
 }
@@ -215,8 +208,6 @@ void receive_lookup(int socket_fd) {
         ssize_t packet_len = recvfromWithTimeout(socket_fd, buffer, sizeof(buffer), 0,
                                       (struct sockaddr *)&client_address, &client_address_len, 2);
 									
-		
-		// printf("Received message: %s\n", buffer);
         if (packet_len < 0) {
             PRINT_ERRNO();
         }
@@ -225,6 +216,8 @@ void receive_lookup(int socket_fd) {
         std::string received_message(reinterpret_cast<char *>(buffer), packet_len);
 		std::regex pattern("^(BOREWICZ_HERE)\\s(\\S+)\\s(\\d+)\\s([\\x20-\\x7F]+)\\n$");
     	std::smatch matches;
+
+		std::cerr << "Received message: " << received_message << std::endl;
 
 		std::string input((char *) buffer);
 		if (std::regex_match(input, matches, pattern)) {
@@ -236,7 +229,9 @@ void receive_lookup(int socket_fd) {
 				UIHandler::addRadioStation(radio_station);
 			}
             std::cerr << "4. Received lookup response from " << inet_ntoa(client_address.sin_addr) << std::endl << std::endl;
-        }
+        } else {
+			std::cerr << "Received message does not match the pattern" << std::endl;
+		}
 
 		UIHandler::removeInactiveRadioStations();
     }
@@ -264,20 +259,17 @@ void receiver(size_t bsize) {
     int maxFd = std::max(socket_receive_music_fd, UIHandler::pipefd[0]) + 1;
 
 	while (running) {
-		std::cerr << "debug1" << std::endl;
 		FD_ZERO(&readFds);
         FD_SET(socket_receive_music_fd, &readFds);
         FD_SET(UIHandler::pipefd[0], &readFds);
-		std::cerr << "Current radiostation is " << selected_radio_station.name << " "  << selected_radio_station.ip_address << " on port " << selected_radio_station.port << std::endl;
+		// std::cerr << "Current radiostation is " << selected_radio_station.name << " "  << selected_radio_station.ip_address << " on port " << selected_radio_station.port << std::endl;
 		int readyFds = select(maxFd, &readFds, nullptr, nullptr, nullptr);
-		std::cerr << "debug2" << std::endl;
 		if (readyFds == -1) {
             std::cerr << "Failed to select" << std::endl;
             return;
         }
 		if (FD_ISSET(UIHandler::pipefd[0], &readFds)) {
             // Handle message from UIHandler pipe
-			std::cerr << "debug3" << std::endl;
             int message;
             if (read(UIHandler::pipefd[0], &message, sizeof(message)) == -1) {
                 std::cerr << "Failed to read from pipe" << std::endl;
@@ -290,10 +282,7 @@ void receiver(size_t bsize) {
 			selected_radio_station.ip_address = radio_station.ip_address;
 			selected_radio_station.port = radio_station.port;
 			std::cerr << "New radio station is " << selected_radio_station.name << " "  << selected_radio_station.ip_address << " on port " << selected_radio_station.port << std::endl;
-			std::cerr << "debug4" << std::endl;
 			is_running = false;
-			std::cerr << "is_running = " << is_running << std::endl;
-			std::cerr << "message: " << message << std::endl;
 			// The selected station has changed, break from the loop
 			mreq.imr_multiaddr.s_addr =  inet_addr(selected_radio_station.ip_address.c_str()); // od tego co przyjmuje
 			mreq.imr_interface.s_addr = htonl(INADDR_ANY);
@@ -310,7 +299,6 @@ void receiver(size_t bsize) {
         }
 
 		psize_read = read_message(socket_receive_music_fd, &client_address, big_buff, MAX_PACKET_SIZE);
-		std::cerr << "received music of size " << psize_read << std::endl;
 		if (psize_read < 16 || psize_read == SIZE_MAX)
 			continue;
 		psize_read -= 16;
@@ -348,25 +336,16 @@ void receiver(size_t bsize) {
 		}
 		lk.unlock();
 	}
-	std::cerr << "debug5" << std::endl;
 	_send_thread.join();
-	std::cerr << "debug8" << std::endl;
 }
 
-void control_thread(int socket_fd, size_t bsize) {
-	std::thread scanner_thread(scanner, socket_fd);
-	std::thread receive_lookup_thread(receive_lookup, socket_fd);
+void control_thread(int ctrl_socket, size_t bsize, std::string discover_addr, int ui_port) {
+	std::thread scanner_thread(scanner, ctrl_socket);
+	std::thread receive_lookup_thread(receive_lookup, ctrl_socket);
     std::thread serverThread(&UIHandler::runTelnetServer);
-
-	// RadioStation radio_station1("Radio Maryja", "localhost", 20000);
-	// RadioStation radio_station2("Radio Zet", "localhost", 20000);
-
-	// UIHandler::addRadioStation(radio_station1);
-	// UIHandler::addRadioStation(radio_station2);
 
 	while (1) {
 		std::thread receiver_thread(receiver, bsize);
-		std::cerr << "Creating new receiver thread" << std::endl;
 
 		receiver_thread.join();
 	}
@@ -383,7 +362,9 @@ int main(int ac, char* av[]) {
     size_t bsize = vm["BSIZE"].as<int>();
 	std::string name = vm["NAME"].as<string>();
 	int ctrl_socket = create_broadcast_reuse_socket();
-	std::thread _control_thread = std::thread(control_thread, ctrl_socket, bsize);
+	std::string discover_addr = vm["DISCOVER_ADDR"].as<string>();
+	int ui_port = vm["UI_PORT"].as<int>();
+	std::thread _control_thread = std::thread(control_thread, ctrl_socket, bsize, discover_addr, ui_port);
 	_control_thread.join();
 	return 0;
 }

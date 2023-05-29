@@ -89,7 +89,7 @@ sockaddr_in get_send_address(char *host, uint16_t port) {
     return send_address;
 }
 
-void lookup_thread(uint32_t ctrl_port, std::string name) {
+void lookup_thread(uint32_t ctrl_port, std::string name, uint32_t data_port) {
     // Set socket on control port with any address
     int socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (socket_fd < 0) {
@@ -103,7 +103,7 @@ void lookup_thread(uint32_t ctrl_port, std::string name) {
     CHECK(setsockopt(socket_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)));
     opt = 1;
     CHECK(setsockopt(socket_fd, IPPROTO_IP, IP_MULTICAST_TTL, &opt, sizeof(opt)));
-    bind_socket(socket_fd, 38477);
+    bind_socket(socket_fd, ctrl_port);
 
     while (1) {
         struct sockaddr_in client_address;
@@ -118,8 +118,10 @@ void lookup_thread(uint32_t ctrl_port, std::string name) {
         std::cerr << "2. Received lookup message: " << buffer << std::endl;
         // Check if received message is "ZERO_SEVEN_COME_IN\n"
         if (packet_len == 19 && strncmp((char *) buffer, "ZERO_SEVEN_COME_IN\n", 19) == 0) {
-            std::string message = "BOREWICZ_HERE 239.10.11.1 2137 " + name;
-            message = message + "\n";
+            std::stringstream messagess;
+            messagess << "BOREWICZ_HERE " << "239.10.11.1" << " " << data_port << " " << name << "\n";
+            std::string message = messagess.str();
+            // std::string message = "BOREWICZ_HERE 239.10.11.1 2137 " + name;
             ssize_t sent_len = sendto(socket_fd, message.c_str(), message.length(), 0,
                                       (struct sockaddr *) &client_address, client_address_len);
             
@@ -163,7 +165,7 @@ int main(int ac, char* av[]) {
     int enable = 1;
     setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
 
-    std::thread lookup_thrd = std::thread(lookup_thread, 30000 + (438477 % 10000), name);
+    std::thread lookup_thrd = std::thread(lookup_thread, 30000 + (438477 % 10000), name, data_port);
 
     size_t session_id = time(NULL);
     size_t first_byte_num = 0;
