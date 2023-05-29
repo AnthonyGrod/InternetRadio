@@ -27,6 +27,7 @@ namespace po = boost::program_options;
 #define MAX_PACKET_SIZE 65535
 
 #define ntohll(x) ((1==ntohl(1)) ? (x) : ((uint64_t)ntohl((x) & 0xFFFFFFFF) << 32) | ntohl((x) >> 32))
+#define htonll(x) (((uint64_t)htonl(x)) << 32 | htonl(x >> 32))
 
 uint8_t big_buff[MAX_PACKET_SIZE];
 std::atomic<bool> is_running(true);
@@ -68,12 +69,12 @@ int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
 
 size_t get_first_byte_num() {
 	uint64_t first_byte_num = ((uint64_t *) big_buff)[1];
-	return htonll(first_byte_num);
+	return ntohll(first_byte_num);
 }
 
 size_t get_session_id() {
 	uint64_t session_id = ((uint64_t *) big_buff)[0];
-	return htonll(session_id);
+	return ntohll(session_id);
 }
 
 size_t calculate_packet_number(size_t byte_zero, size_t first_byte_num, size_t psize) {
@@ -340,7 +341,7 @@ void receiver(size_t bsize) {
 void control_thread(int ctrl_socket, size_t bsize, std::string discover_addr, int ui_port) {
 	std::thread scanner_thread(scanner, ctrl_socket, discover_addr);
 	std::thread receive_lookup_thread(receive_lookup, ctrl_socket);
-    std::thread serverThread(&UIHandler::runTelnetServer);
+    std::thread serverThread(&UIHandler::runTelnetServer, ui_port);
 
 	while (1) {
 		std::thread receiver_thread(receiver, bsize);

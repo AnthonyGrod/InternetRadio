@@ -202,7 +202,7 @@ public:
         notifySelectedStationChanged(selectedStationIndex);
     }
 
-    static void runTelnetServer() {
+    static void runTelnetServer(uint32_t port) {
         pipe(UIHandler::pipefd);
         // Create a socket for the server
         int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -215,7 +215,7 @@ public:
         sockaddr_in serverAddress{};
         serverAddress.sin_family = AF_INET;
         serverAddress.sin_addr.s_addr = INADDR_ANY;
-        serverAddress.sin_port = htons(23); // Telnet port
+        serverAddress.sin_port = htons(port); // Telnet port
 
         // Bind the socket to the server address
         if (bind(serverSocket, reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress)) == -1) {

@@ -20,6 +20,7 @@ using namespace std;
 namespace po = boost::program_options;
 
 #define ntohll(x) ((1==ntohl(1)) ? (x) : ((uint64_t)ntohl((x) & 0xFFFFFFFF) << 32) | ntohl((x) >> 32))
+#define htonll(x) (((uint64_t)htonl(x)) << 32 | htonl(x >> 32))
 
 void print_packet(uint8_t *p) {
     for (int i = 16; i < 16 + 512; i++) {
@@ -170,8 +171,8 @@ int main(int ac, char* av[]) {
         if (length % psize != 0 && feof(stdin)) {
             break;
         }
-        size_t htonll_session_id = ntohll(session_id);
-        size_t htonll_first_byte_num = ntohll(first_byte_num);
+        size_t htonll_session_id = htonll(session_id);
+        size_t htonll_first_byte_num = htonll(first_byte_num);
         memcpy(buffer, &htonll_session_id, 8);
         memcpy(buffer + 8, &htonll_first_byte_num, 8);
         // send message to receiver
@@ -179,8 +180,7 @@ int main(int ac, char* av[]) {
         first_byte_num += psize;
     }
     
-    // close socket
-    close(socket_fd);
     lookup_thrd.join();
+    close(socket_fd);
     return 0;
 }
