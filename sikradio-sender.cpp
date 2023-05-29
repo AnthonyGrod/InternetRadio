@@ -31,11 +31,14 @@ int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
     po::options_description desc("Allowed options");
         desc.add_options()
         ("help", "produce help message")
+        // ("MULTICAST_ADDR,m", po::value<string>()->required(), "set multicast ip address")
         ("DEST_ADDR,a", po::value<string>()->required(), "set receiver ip address")
         ("DATA_PORT,P", po::value<int>()->default_value(20000 + (438477 % 10000)), "set receiver port")
         ("NAME,n", po::value<string>()->default_value("Nienazwany Nadajnik"), "set sender's name")
         ("PSIZE,p", po::value<int>()->default_value(512), "set package size (in bytes)")
         ("CTRL_PORT,C", po::value<int>()->default_value(30000 + (438477 % 10000)), "set control port")
+        ("FSIZE,f", po::value<int>()->default_value(131072), "set file size (in bytes)")
+        ("RTIME,R", po::value<int>()->default_value(250), "set retransmission time (in ms)")
         ;
     try {
     	po::store(po::parse_command_line(ac, av, desc), vm);
@@ -128,7 +131,6 @@ void lookup_thread(uint32_t ctrl_port, std::string name) {
     }
 }
 
-
 int main(int ac, char* av[]) {
     // Declare the supported options.
     po::variables_map vm;
@@ -155,6 +157,11 @@ int main(int ac, char* av[]) {
     if (socket_fd < 0) {
         PRINT_ERRNO();
     }
+
+    int opt = 4; // ttlvalue
+    setsockopt(socket_fd, IPPROTO_IP, IP_MULTICAST_TTL, &opt, sizeof(opt));
+    int enable = 1;
+    setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
 
     std::thread lookup_thrd = std::thread(lookup_thread, 30000 + (438477 % 10000), name);
 

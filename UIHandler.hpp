@@ -13,19 +13,21 @@
 #include <arpa/inet.h>
 #include <thread>
 #include <mutex>
+#include <fcntl.h>
 
 #include "RadioStation.hpp"
 
 #define CLEAR_SCREEN "\033[2J\033[H"
 
 class UIHandler {
-private:
+public:
     static std::vector<RadioStation> radioStations;
     static int selectedStationIndex;
     static std::mutex selectionMutex;
     static std::vector<int> clientSockets;
+    static int pipefd[2];
 
-public:
+
     UIHandler() {
         enableRawMode();
     }
@@ -41,16 +43,20 @@ public:
 
     static void moveSelectionUp(int clientSocket) {
         std::lock_guard<std::mutex> lock(selectionMutex);
-        if (selectedStationIndex > 0)
+        if (selectedStationIndex > 0) {
             --selectedStationIndex;
-        broadcastUIUpdate();
+            notifySelectedStationChanged(selectedStationIndex);
+            broadcastUIUpdate();
+        }
     }
 
     static void moveSelectionDown(int clientSocket) {
         std::lock_guard<std::mutex> lock(selectionMutex);
-        if (selectedStationIndex < radioStations.size() - 1)
+        if (selectedStationIndex < radioStations.size() - 1) {
             ++selectedStationIndex;
-        broadcastUIUpdate();
+            notifySelectedStationChanged(selectedStationIndex);
+            broadcastUIUpdate();
+        }
     }
 
     static char readKey() {
@@ -105,17 +111,12 @@ public:
         return res;
     }
 
-    static void handleCommand(const std::string& command) {
-        if (command == "next") {
-            std::lock_guard<std::mutex> lock(selectionMutex);
-            if (selectedStationIndex < radioStations.size() - 1)
-                ++selectedStationIndex;
-            broadcastUIUpdate();
-        } else if (command == "prev") {
-            std::lock_guard<std::mutex> lock(selectionMutex);
-            if (selectedStationIndex > 0)
-                --selectedStationIndex;
-            broadcastUIUpdate();
+    static RadioStation getRadioStation(int index) {
+        std::lock_guard<std::mutex> lock(selectionMutex);
+        if (index >= 0 && index < radioStations.size()) {
+            return radioStations[index];
+        } else {
+            return RadioStation();
         }
     }
 
@@ -182,6 +183,14 @@ public:
         close(clientSocket);
     }
 
+    static void notifySelectedStationChanged(int selectedStationIndex) {
+        // std::string message = "selected " + std::to_string(selectedStationIndex);
+        if (write(pipefd[1], &selectedStationIndex, sizeof(selectedStationIndex)) == -1) {
+            std::cerr << "Failed to write to pipe" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+    }
+
     static void broadcastUIUpdate() {
         std::string uiOutput = generateTelnetUIOutput();
 
@@ -189,9 +198,11 @@ public:
         for (int clientSocket : clientSockets) {
             send(clientSocket, uiOutput.c_str(), uiOutput.length(), 0);
         }
+        notifySelectedStationChanged(selectedStationIndex);
     }
 
     static void runTelnetServer() {
+        pipe(UIHandler::pipefd);
         // Create a socket for the server
         int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
         if (serverSocket == -1) {
@@ -240,6 +251,8 @@ public:
             telnetThread.detach(); // Detach the thread and let it run independently
         }
 
+        close(pipefd[0]);
+        close(pipefd[1]);
         close(serverSocket); // Close the server socket
     }
 
@@ -271,9 +284,12 @@ public:
             }
         }
     }
+
 };
 
 std::vector<RadioStation> UIHandler::radioStations = {};
 int UIHandler::selectedStationIndex = 0;
 std::mutex UIHandler::selectionMutex;
 std::vector<int> UIHandler::clientSockets;
+int UIHandler::pipefd[2];
+

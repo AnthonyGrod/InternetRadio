@@ -34,16 +34,22 @@ size_t psize_read = 0;
 size_t last_packet_num_received = 0;
 size_t packet_number = 0;
 
+RadioStation selected_radio_station = RadioStation();
+
 CycleBuff *cycle_buff_ptr = new CycleBuff();
 
 int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
     po::options_description desc("Allowed options");
 		desc.add_options()
         ("help", "produce help message")
-        ("DEST_ADDR,a", po::value<string>()->required(), "set sender's ip address")
+        // ("DEST_ADDR,a", po::value<string>()->required(), "set sender's ip address")
+		("CTRL_PORT,C", po::value<int>()->default_value(30000 + (438477 % 10000)), "set control port")
+		("UI_PORT,U", po::value<int>()->default_value(10000 + (438477 % 10000)), "set UI port")
+		("DISCOVER_ADDR,d", po::value<string>()->default_value("255.255.255.255"))
         ("DATA_PORT,P", po::value<int>()->default_value(20000 + (438477 % 10000)), "set sender's port")
         ("BSIZE,b", po::value<int>()->default_value(65536), "set buffor size (in bytes)")
 		("NAME,n", po::value<string>()->default_value("Nienazwany Nadajnik"), "set sender's name")
+		("RTIME,R", po::value<int>()->default_value(250), "set retransmission time (in ms)")
     	;
 	try {
     	po::store(po::parse_command_line(ac, av, desc), vm);
@@ -51,7 +57,6 @@ int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
 		int b = vm["BSIZE"].as<int>();
         if (b <= 0 || vm["DATA_PORT"].as<int>() > 65536) {throw std::runtime_error("Invalid arguments");}
 	} catch (const std::exception& e)  {std::cerr << "Bad arguments " << desc; exit(1);}
-	if (!vm.count("DEST_ADDR")) {fatal("DEST_ADDR is required.");}
 
     if (vm.count("help")) {
         cout << desc << "\n";
@@ -61,25 +66,21 @@ int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
     return 0;  
 }
 
-
 size_t get_first_byte_num() {
 	uint64_t first_byte_num = ((uint64_t *) big_buff)[1];
 	return htonll(first_byte_num);
 }
-
 
 size_t get_session_id() {
 	uint64_t session_id = ((uint64_t *) big_buff)[0];
 	return htonll(session_id);
 }
 
-
 size_t calculate_packet_number(size_t byte_zero, size_t first_byte_num, size_t psize) {
 	// We know that both byte_zero and first_byte_num are divisible by psize. Packets are numbered from 0.
 	assert(first_byte_num >= byte_zero);
 	return ((first_byte_num - byte_zero) / (psize));
 }
-
 
 void put_into_buff(size_t put_num, size_t newest_num, size_t psize) {
 	if (put_num > newest_num) {
@@ -136,7 +137,6 @@ void put_into_buff(size_t put_num, size_t newest_num, size_t psize) {
 	}
 }
 
-
 void print_buffer() {
 	size_t helper = 0;
 	while (is_running) {
@@ -161,7 +161,6 @@ void print_buffer() {
 	}
 }
 
-
 size_t read_message(int socket_fd, struct sockaddr_in *client_address, uint8_t *buffer, size_t max_length) {
     socklen_t address_length = (socklen_t) sizeof(*client_address);
     int flags = 0; // we do not request anything special
@@ -174,8 +173,6 @@ size_t read_message(int socket_fd, struct sockaddr_in *client_address, uint8_t *
     return (size_t) len;
 }
 
-
-// Sending broadcast lookup messages
 void scanner(int socket_fd) {
     struct addrinfo hint = {0}, *res;
     hint.ai_family = AF_INET;
@@ -191,12 +188,11 @@ void scanner(int socket_fd) {
     while (1) {
         char message[20] = "ZERO_SEVEN_COME_IN\n";
         if (sendto(socket_fd, message, 19, 0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {fatal("sendto");}
-        std::cerr << "1. Sent lookup message" << std::endl;
+        std::cerr << "1. Sent lookup message to " << inet_ntoa(addr.sin_addr) << std::endl;
         sleep(5);
     }
 }
 
-// Receiving lookup messages
 void receive_lookup(int socket_fd) {
     while (1) {
         struct sockaddr_in client_address;
@@ -233,23 +229,115 @@ void receive_lookup(int socket_fd) {
     }
 }
 
+// void receiver_v2(size_t bsize) {
+// 	int socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
+// 	if (socket_fd < 0) {
+// 		PRINT_ERRNO();
+// 	}
+//     struct addrinfo addrinfo;
+//     struct addrinfo hints;
+//     memset(&hints, 0, sizeof(hints));
+//     hints.ai_family = AF_INET;
+//     hints.ai_socktype = SOCK_DGRAM;
+//     hints.ai_flags = AI_PASSIVE;
 
-void receiver(int data_port, string dest_addr_str, size_t bsize, std::string name) {
-	int socket_fd = bind_socket(data_port);
+// 	struct ip_mreq mreq;
+
+// 	size_t session_id = 0, byte_zero = 0, first_byte_num = 0, prev_psize_read = MAX_PACKET_SIZE + 420;
+// 	bool running = true;
+// 	struct sockaddr_in client_address;
+
+// 	std::thread _send_thread = std::thread(print_buffer);
+
+// 	// Create a file descriptor set to be used with select()
+//     fd_set readFds;
+//     int maxFd = std::max(socket_fd, pipefd[0]) + 1;
+
+// 	while (running) {
+// 		FD_ZERO(&readFds);
+//         FD_SET(socket_fd, &readFds);
+//         FD_SET(pipefd[0], &readFds);
+// 		int readyFds = select(maxFd, &readFds, nullptr, nullptr, nullptr);
+// 		if (readyFds == -1) {
+//             std::cerr << "Failed to select" << std::endl;
+//             return;
+//         }
+// 		if (FD_ISSET(pipefd[0], &readFds)) {
+//             // Handle message from UIHandler pipe
+//             int message;
+//             if (read(pipefd[0], &message, sizeof(message)) == -1) {
+//                 std::cerr << "Failed to read from pipe" << std::endl;
+//                 return;
+//             }
+//             // Process the received message
+//             std::lock_guard<std::mutex> lock(selectionMutex);
+// 			if (UIHandler::getSelectedStationIndex() != message) {
+// 				// switch to new station
+// 				selected_radio_station = UIHandler::getRadioStation(message);
+
+// 			}
+//         }
+// 		else {
+// 			// We continue reading from the socket from selected_radio_station
+// 			psize_read = read_message(socket_fd, &client_address, big_buff, MAX_PACKET_SIZE);
+// 		}
+// 	}
+
+// }
+
+void receiver(size_t bsize) {
+	int socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (socket_fd < 0) {
+		PRINT_ERRNO();
+	}
+    struct addrinfo addrinfo;
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_flags = AI_PASSIVE;
+
+    struct ip_mreq mreq;
+
 	size_t session_id = 0, byte_zero = 0, first_byte_num = 0, prev_psize_read = MAX_PACKET_SIZE + 420;
-	bool first_session_read = true;
+	bool running = true;
 	struct sockaddr_in client_address;
-	char* address = new char[dest_addr_str.size() + 1];
-	strcpy(address, dest_addr_str.c_str());
-	struct sockaddr_in connected_client_address = get_address(address, data_port);
 
 	std::thread _send_thread = std::thread(print_buffer);
 
-	while (first_session_read) {
-		psize_read = read_message(socket_fd, &client_address, big_buff, MAX_PACKET_SIZE);
+	// Create a file descriptor set to be used with select()
+    fd_set readFds;
+    int maxFd = std::max(socket_fd, UIHandler::pipefd[0]) + 1;
 
-		if (!(client_address.sin_addr.s_addr == connected_client_address.sin_addr.s_addr)) // not allowing new address
-			continue;
+	while (running) {
+		FD_ZERO(&readFds);
+        FD_SET(socket_fd, &readFds);
+        FD_SET(UIHandler::pipefd[0], &readFds);
+		int readyFds = select(maxFd, &readFds, nullptr, nullptr, nullptr);
+		if (readyFds == -1) {
+            std::cerr << "Failed to select" << std::endl;
+            return;
+        }
+		if (FD_ISSET(UIHandler::pipefd[0], &readFds)) {
+            // Handle message from UIHandler pipe
+            int message;
+            if (read(UIHandler::pipefd[0], &message, sizeof(message)) == -1) {
+                std::cerr << "Failed to read from pipe" << std::endl;
+                return;
+            }
+			// The selected station has changed, break from the loop
+			mreq.imr_multiaddr.s_addr =  inet_addr(selected_radio_station.ip_address.c_str()); // od tego co przyjmuje
+			mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+			setsockopt(socket_fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq));
+			int enable = 1;
+			setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
+			enable = 1;
+			setsockopt(socket_fd, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
+			running = false;
+			break;
+        }
+
+		psize_read = read_message(socket_fd, &client_address, big_buff, MAX_PACKET_SIZE);
 		if (psize_read < 16 || psize_read == SIZE_MAX)
 			continue;
 		psize_read -= 16;
@@ -290,14 +378,10 @@ void receiver(int data_port, string dest_addr_str, size_t bsize, std::string nam
 	_send_thread.join();
 }
 
-// void add_radio_station_thread() {}
-// void remove_radio_station_thread() {}
-
-void control_thread(int socket_fd, int data_port, string dest_addr_str, size_t bsize, std::string name) {
+void control_thread(int socket_fd, size_t bsize) {
 	std::thread scanner_thread(scanner, socket_fd);
 	std::thread receive_lookup_thread(receive_lookup, socket_fd);
     std::thread serverThread(&UIHandler::runTelnetServer);
-	std::thread receiver_thread(receiver, data_port, dest_addr_str, bsize, name);
 
 	RadioStation radio_station1("Radio Maryja", "localhost", 20000);
 	RadioStation radio_station2("Radio Zet", "localhost", 20000);
@@ -305,22 +389,25 @@ void control_thread(int socket_fd, int data_port, string dest_addr_str, size_t b
 	UIHandler::addRadioStation(radio_station1);
 	UIHandler::addRadioStation(radio_station2);
 
+	while (1) {
+		std::thread receiver_thread(receiver, bsize);
+
+		receiver_thread.join();
+	}
+
 	serverThread.join();
 	scanner_thread.join();
 	receive_lookup_thread.join();
 }
 
-
 int main(int ac, char* av[]) {
 	po::variables_map vm;
     if (set_parsed_arguments(vm, ac, av) == 1)
         return 1;
-    string dest_addr_str = vm["DEST_ADDR"].as<string>();
-    int data_port = vm["DATA_PORT"].as<int>();
     size_t bsize = vm["BSIZE"].as<int>();
 	std::string name = vm["NAME"].as<string>();
 	int ctrl_socket = create_broadcast_reuse_socket();
-	std::thread _control_thread = std::thread(control_thread, ctrl_socket, data_port, dest_addr_str, bsize, name);
+	std::thread _control_thread = std::thread(control_thread, ctrl_socket, bsize);
 	_control_thread.join();
 	return 0;
 }

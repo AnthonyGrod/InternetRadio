@@ -24,5 +24,4 @@ public:
     bool operator==(const RadioStation &other) const {
         return this->name == other.name && this->ip_address == other.ip_address && this->port == other.port;
     }
-
 };

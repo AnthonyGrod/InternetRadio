@@ -1019,8 +1019,11 @@ CMakeFiles/sikradio-receiver.dir/sikradio-receiver.cpp.o: /Users/agrodowski/Desk
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/sys/termios.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/sys/ttycom.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/sys/ioccom.h \
-  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/sys/ttydefaults.h
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/sys/ttydefaults.h \
+  /Users/agrodowski/Desktop/MIM/IVSEM/SIK/ZAL2/InternetRadio/RadioStation.hpp
 
+
+/Users/agrodowski/Desktop/MIM/IVSEM/SIK/ZAL2/InternetRadio/RadioStation.hpp:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk/usr/include/sys/ioccom.h:
 

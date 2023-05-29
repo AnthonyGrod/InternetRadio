@@ -29,8 +29,6 @@ inline static uint16_t get_port(struct sockaddr_in *address) {
     return ntohs(address->sin_port);
 }
 
-/// No need to free the returned string,
-/// it is a pointer to a static buffer
 inline static char *get_ip(struct sockaddr_in *address) {
     return inet_ntoa(address->sin_addr);
 }
@@ -107,7 +105,6 @@ int bind_socket(uint16_t port) {
     return socket_fd;
 }
 
-/// Returns the assigned port number
 inline static uint16_t bind_socket_to_any_port(int socket_fd) {
     bind_socket(socket_fd, 0);
     return get_port_from_socket(socket_fd);
@@ -176,7 +173,6 @@ inline static void send_message(int socket_fd, const void *message, size_t lengt
     }
     ENSURE(sent_length == (ssize_t) length);
 }
-
 
 void send_broadcast_message(int socket_fd, const sockaddr_in* send_address, const uint8_t* message, size_t message_length) {
     int broadcast_enable = 1;
@@ -298,7 +294,6 @@ int create_broadcast_reuse_socket() {
     if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &opt, sizeof(opt)) < 0) {fatal("setsockopt");}
     return sock;
 }
-
 
 int recvfromWithTimeout(int sockfd, void* buffer, size_t length, int flags, struct sockaddr* addr, socklen_t* addrlen, int timeout) {
     fd_set fds;
