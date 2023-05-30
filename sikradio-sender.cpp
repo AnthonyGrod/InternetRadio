@@ -52,8 +52,13 @@ int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
         if (p <= 0 || f <= 0 || r <= 0 || c <= 0 || port <= 0 || p > 65535 || 
             port > 65535 || c > 65535) {
             throw std::runtime_error("Invalid arguments");
-        }
+        } // TODO
         if (!RadioStation::isNameValid(vm["NAME"].as<string>()) || !RadioStation::isValidMulticastIPv4(vm["MCAST_ADDR"].as<string>())) {
+            if (!RadioStation::isNameValid(vm["NAME"].as<string>())) {
+                std::cerr << "Invalid name" << std::endl;
+            } else {
+                std::cerr << "Invalid multicast address" << std::endl;
+            }
 			throw std::runtime_error("Invalid name");
 		}
 	} catch (...)  {std::cerr << "Bad arguments " << desc; exit(1);}
@@ -151,6 +156,7 @@ int main(int ac, char* av[]) {
     int data_port = vm["DATA_PORT"].as<int>();
     string name = vm["NAME"].as<string>();
     int psize = vm["PSIZE"].as<int>();
+    int ctrl_port = vm["CTRL_PORT"].as<int>();
 
     uint8_t buffer[psize + 16];
 
@@ -171,7 +177,7 @@ int main(int ac, char* av[]) {
     int enable = 1;
     setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
 
-    std::thread lookup_thrd = std::thread(lookup_thread, 30000 + (438477 % 10000), name, data_port, dest_addr_str);
+    std::thread lookup_thrd = std::thread(lookup_thread, ctrl_port, name, data_port, dest_addr_str); // changed
 
     size_t session_id = time(NULL);
     size_t first_byte_num = 0;
@@ -185,7 +191,7 @@ int main(int ac, char* av[]) {
         memcpy(buffer, &htonll_session_id, 8);
         memcpy(buffer + 8, &htonll_first_byte_num, 8);
         // send message to receiver
-        send_message(socket_fd, &send_address, buffer, psize);
+        send_message(socket_fd, &send_address, buffer, psize + 16);
         first_byte_num += psize;
     }
     

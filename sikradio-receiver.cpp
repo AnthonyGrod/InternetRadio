@@ -191,7 +191,7 @@ size_t read_message(int socket_fd, struct sockaddr_in *client_address, uint8_t *
     return (size_t) len;
 }
 
-void scanner(int socket_fd, std::string discover_addr) {
+void scanner(int socket_fd, std::string discover_addr, int ctrl_port) {
     struct addrinfo hint = {0}, *res;
     hint.ai_family = AF_INET;
     hint.ai_socktype = SOCK_DGRAM;
@@ -199,7 +199,7 @@ void scanner(int socket_fd, std::string discover_addr) {
 
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(38477);
+    addr.sin_port = htons(ctrl_port); // changed
     addr.sin_addr = ((struct sockaddr_in *) res->ai_addr)->sin_addr;
     freeaddrinfo(res);
 
@@ -335,8 +335,8 @@ void receiver(size_t bsize) {
 	_send_thread.join();
 }
 
-void control_thread(int ctrl_socket, size_t bsize, std::string discover_addr, int ui_port) {
-	std::thread scanner_thread(scanner, ctrl_socket, discover_addr);
+void control_thread(int ctrl_socket, size_t bsize, std::string discover_addr, int ui_port, int ctrl_port) {
+	std::thread scanner_thread(scanner, ctrl_socket, discover_addr, ctrl_port);
 	std::thread receive_lookup_thread(receive_lookup, ctrl_socket);
     std::thread serverThread(&UIHandler::runTelnetServer, ui_port);
 	while (1) {
@@ -357,7 +357,8 @@ int main(int ac, char* av[]) {
 	int ctrl_socket = create_broadcast_reuse_socket();
 	std::string discover_addr = vm["DISCOVER_ADDR"].as<string>();
 	int ui_port = vm["UI_PORT"].as<int>();
-	std::thread _control_thread = std::thread(control_thread, ctrl_socket, bsize, discover_addr, ui_port);
+	int ctrl_port = vm["CTRL_PORT"].as<int>();
+	std::thread _control_thread = std::thread(control_thread, ctrl_socket, bsize, discover_addr, ui_port, ctrl_port);
 	_control_thread.join();
 	close(ctrl_socket);
 	close(socket_receive_music_fd);
