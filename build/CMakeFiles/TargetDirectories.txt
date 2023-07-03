@@ -1,5 +1,0 @@
-/Users/agrodowski/Desktop/MIM/IVSEM/SIK/ZAL2/InternetRadio/build/CMakeFiles/sikradio-receiver.dir
-/Users/agrodowski/Desktop/MIM/IVSEM/SIK/ZAL2/InternetRadio/build/CMakeFiles/sikradio-sender.dir
-/Users/agrodowski/Desktop/MIM/IVSEM/SIK/ZAL2/InternetRadio/build/CMakeFiles/lookup.dir
-/Users/agrodowski/Desktop/MIM/IVSEM/SIK/ZAL2/InternetRadio/build/CMakeFiles/edit_cache.dir
-/Users/agrodowski/Desktop/MIM/IVSEM/SIK/ZAL2/InternetRadio/build/CMakeFiles/rebuild_cache.dir

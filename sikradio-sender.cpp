@@ -52,13 +52,8 @@ int set_parsed_arguments(po::variables_map &vm, int ac, char* av[]) {
         if (p <= 0 || f <= 0 || r <= 0 || c <= 0 || port <= 0 || p > 65535 || 
             port > 65535 || c > 65535) {
             throw std::runtime_error("Invalid arguments");
-        } // TODO
+        }
         if (!RadioStation::isNameValid(vm["NAME"].as<string>()) || !RadioStation::isValidMulticastIPv4(vm["MCAST_ADDR"].as<string>())) {
-            if (!RadioStation::isNameValid(vm["NAME"].as<string>())) {
-                std::cerr << "Invalid name" << std::endl;
-            } else {
-                std::cerr << "Invalid multicast address" << std::endl;
-            }
 			throw std::runtime_error("Invalid name");
 		}
 	} catch (...)  {std::cerr << "Bad arguments " << desc; exit(1);}
